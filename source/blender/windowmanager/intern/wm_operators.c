@@ -112,6 +112,8 @@
 #include "wm_files.h"
 #include "wm_window.h"
 
+#include "../vr/vr_build.h"
+
 #define UNDOCUMENTED_OPERATOR_TIP N_("(undocumented operator)")
 
 /* ************ operator API, exported ********** */
@@ -1792,6 +1794,18 @@ static void WM_OT_window_new_main(wmOperatorType *ot)
 	ot->poll = wm_operator_winactive_normal;
 }
 
+#ifdef WITH_VR
+static void WM_OT_window_new_vr(wmOperatorType *ot)
+{
+	ot->name = "New VR Window";
+	ot->idname = "WM_OT_window_new_vr";
+	ot->description = "Create a new vr window";
+
+	ot->exec = wm_window_new_vr_exec;
+	ot->poll = wm_operator_winactive_normal;
+}
+#endif
+
 static void WM_OT_window_fullscreen_toggle(wmOperatorType *ot)
 {
 	ot->name = "Toggle Window Fullscreen";
@@ -3161,6 +3175,7 @@ void wm_operatortypes_register(void)
 	WM_operatortype_append(WM_OT_window_close);
 	WM_operatortype_append(WM_OT_window_new);
 	WM_operatortype_append(WM_OT_window_new_main);
+	WM_operatortype_append(WM_OT_window_new_vr);
 	WM_operatortype_append(WM_OT_read_history);
 	WM_operatortype_append(WM_OT_read_homefile);
 	WM_operatortype_append(WM_OT_read_factory_settings);

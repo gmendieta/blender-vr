@@ -539,6 +539,7 @@ function(SETUP_BLENDER_SORTED_LIBS)
 
 	list(APPEND BLENDER_LINK_LIBS
 		bf_windowmanager
+        bf_vr
 		bf_render
 	)
 
@@ -569,6 +570,7 @@ function(SETUP_BLENDER_SORTED_LIBS)
 	# Sort libraries
 	set(BLENDER_SORTED_LIBS
 		bf_windowmanager
+        bf_vr
 
 		bf_editor_undo
 

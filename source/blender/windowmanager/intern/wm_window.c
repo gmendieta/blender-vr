@@ -93,6 +93,9 @@
 #  include "BLI_threads.h"
 #endif
 
+#include "../vr/vr_build.h"
+#include "../vr/vr_vr.h"
+
 /* the global to talk to ghost */
 static GHOST_SystemHandle g_system = NULL;
 
@@ -1015,6 +1018,33 @@ int wm_window_new_main_exec(bContext *C, wmOperator *UNUSED(op))
 	ok = (wm_window_copy_test(C, win_src, true, false) != NULL);
 
 	return ok ? OPERATOR_FINISHED : OPERATOR_CANCELLED;
+}
+
+int wm_window_new_vr_exec(bContext *C, wmOperator *UNUSED(op))
+{
+#ifdef WITH_VR
+	wmWindow *win_src = CTX_wm_window(C);
+
+	vrWindow *vr = vr_get_instance();
+	// Only want VR for a window
+	if (vr->win_src)
+	{
+		// Error Message
+		return OPERATOR_CANCELLED;
+	}
+
+	wmWindow *vr_win = wm_window_copy_test(C, win_src, true, false);
+	if (!vr_win)
+	{
+		return OPERATOR_CANCELLED;
+	}
+	vr_initialize();
+	// Initialize VR
+	// Store the Window as VR window
+	vr->win_src = win_src;
+
+#endif
+	return OPERATOR_FINISHED;
 }
 
 /* fullscreen operator callback */

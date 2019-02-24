@@ -113,6 +113,7 @@ add_subdirectory(gpencil_modifiers)
 add_subdirectory(shader_fx)
 add_subdirectory(makesdna)
 add_subdirectory(makesrna)
+add_subdirectory(vr)
 
 if(WITH_COMPOSITOR)
 	add_subdirectory(compositor)

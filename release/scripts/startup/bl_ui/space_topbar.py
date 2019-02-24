@@ -834,6 +834,7 @@ class TOPBAR_MT_window(Menu):
 
         layout.operator("wm.window_new")
         layout.operator("wm.window_new_main")
+        layout.operator("wm.window_new_vr")
 
         layout.separator()
 
