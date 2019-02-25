@@ -50,6 +50,7 @@ set(WITH_X11_XINPUT          ON  CACHE BOOL "" FORCE)
 set(WITH_X11_XF86VMODE       ON  CACHE BOOL "" FORCE)
 
 set(WITH_MEM_JEMALLOC        ON  CACHE BOOL "" FORCE)
+set(WITH_VR                  ON  CACHE BOOL "" FORCE)
 
 
 # platform dependent options

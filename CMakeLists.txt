@@ -1722,6 +1722,9 @@ if(FIRST_RUN)
 		info_cfg_option(WITH_GL_ANGLE)
 	endif()
 
+    info_cfg_text("VR:")
+    info_cfg_option(WITH_VR)
+
 	info_cfg_text("")
 
 	message("${_config_msg}")

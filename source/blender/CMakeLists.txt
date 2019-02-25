@@ -113,7 +113,6 @@ add_subdirectory(gpencil_modifiers)
 add_subdirectory(shader_fx)
 add_subdirectory(makesdna)
 add_subdirectory(makesrna)
-add_subdirectory(vr)
 
 if(WITH_COMPOSITOR)
 	add_subdirectory(compositor)
@@ -149,6 +148,10 @@ endif()
 
 if(WITH_FREESTYLE)
 	add_subdirectory(freestyle)
+endif()
+
+if (WITH_VR)
+    add_subdirectory(vr)
 endif()
 
 if(WITH_ALEMBIC)

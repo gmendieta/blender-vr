@@ -539,9 +539,11 @@ function(SETUP_BLENDER_SORTED_LIBS)
 
 	list(APPEND BLENDER_LINK_LIBS
 		bf_windowmanager
-        bf_vr
 		bf_render
 	)
+    if(WITH_VR)
+        list(APPEND BLENDER_LINK_LIBS bf_vr)
+    endif()
 
 	if(WITH_MOD_FLUID)
 		list(APPEND BLENDER_LINK_LIBS bf_intern_elbeem)
@@ -570,7 +572,6 @@ function(SETUP_BLENDER_SORTED_LIBS)
 	# Sort libraries
 	set(BLENDER_SORTED_LIBS
 		bf_windowmanager
-        bf_vr
 
 		bf_editor_undo
 
@@ -768,6 +769,10 @@ function(SETUP_BLENDER_SORTED_LIBS)
 	if(WITH_OPENVDB)
 		list(APPEND BLENDER_SORTED_LIBS bf_intern_openvdb)
 	endif()
+
+    if (WITH_VR)
+        list_insert_after(BLENDER_SORTED_LIBS "bf_windowmanager" "bf_vr")
+    endif()
 
 	foreach(SORTLIB ${BLENDER_SORTED_LIBS})
 		set(REMLIB ${SORTLIB})

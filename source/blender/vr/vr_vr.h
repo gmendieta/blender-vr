@@ -1,6 +1,10 @@
 #ifndef __VR_VR_H__
 #define __VR_VR_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Forward declarations of Blender structures
 struct GPUOffscreen;
 struct GPUViewport;
@@ -14,8 +18,13 @@ typedef struct vrWindow
 }vrWindow;
 
 // Initialize vr. Should be called first
-void vr_initialize();
-void vr_shutdown();
+int vr_initialize();
+int vr_shutdown();
 vrWindow* vr_get_instance();	// Get VR singleton
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

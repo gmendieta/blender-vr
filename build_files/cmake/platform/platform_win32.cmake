@@ -631,6 +631,40 @@ if(WITH_CYCLES_EMBREE)
 	endif()
 endif()
 
+if (WITH_VR)
+    if(NOT DEFINED VR_LIBDIR)
+        if(CMAKE_CL_64)
+            message(STATUS "64 bit compiler detected.")
+            set(LIBDIR_BASE "vr_win64")
+        else()
+            message(STATUS "32 bit compiler detected.")
+            set(LIBDIR_BASE "vr_windows")
+        endif()
+        # Can be 1910..1912
+        if(MSVC_VERSION GREATER 1909)
+            message(STATUS "Visual Studio 2017 detected.")
+            set(VR_LIBDIR ${CMAKE_SOURCE_DIR}/../lib/${LIBDIR_BASE}_vc14)
+        elseif(MSVC_VERSION EQUAL 1900)
+            message(STATUS "Visual Studio 2015 detected.")
+            set(VR_LIBDIR ${CMAKE_SOURCE_DIR}/../lib/${LIBDIR_BASE}_vc14)
+        #else()
+        #    message(STATUS "Visual Studio 2013 detected.")
+        #    set(VR_LIBDIR ${CMAKE_SOURCE_DIR}/../lib/${LIBDIR_BASE}_vc12)
+        endif()
+    endif()
+    if(NOT EXISTS "${VR_LIBDIR}")
+        message(FATAL_ERROR "VR request pre-compiled libs at: '${VR_LIBDIR}'")
+    endif()
+    
+    # Oculus
+    set(LIBOVR_INCLUDE_PATH ${VR_LIBDIR}/LibOVR/include)
+    set(LIBOVR_LIBRARIES 
+        optimized ${VR_LIBDIR}/LibOVR/lib/LibOVR.lib
+        debug ${VR_LIBDIR}/LibOVR/lib/LibOVRd.lib
+    )
+    set(LIBOVR_LIBPATH ${VR_LIBDIR}/LibOVR/lib)
+endif()
+
 if (WINDOWS_PYTHON_DEBUG)
 	# Include the system scripts in the blender_python_system_scripts project.
 	FILE(GLOB_RECURSE inFiles "${CMAKE_SOURCE_DIR}/release/scripts/*.*" )

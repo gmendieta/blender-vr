@@ -50,17 +50,22 @@ set(INC
     
 set(INC_SYS
     ${GLEW_INCLUDE_PATH}
+    ${LIBOVR_INCLUDE_PATH}
 )
 
 set(SRC
-    intern/vr_vr.c
+    intern/vr_vr.cpp
     intern/vr_math.cpp
+    intern/vr_oculus.cpp
 
     vr_build.h
     vr_api.h
     vr_vr.h
     
     intern/vr_math.h
+    intern/vr_oculus.h
+    intern/vr_bitmask.h
+    intern/vr_utils.h
 )
 
 add_definitions(${GL_DEFINITIONS})
