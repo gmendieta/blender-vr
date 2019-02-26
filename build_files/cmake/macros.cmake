@@ -518,6 +518,11 @@ function(setup_liblinks
 			target_link_libraries(${target} ${CUDA_CUDA_LIBRARY})
 		endif()
 	endif()
+    
+    if(WITH_VR)
+        target_link_libraries(${target} ${VR_LIBRARIES})
+	endif()
+    
 
 	target_link_libraries(
 		${target}

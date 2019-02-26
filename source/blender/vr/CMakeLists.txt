@@ -50,7 +50,7 @@ set(INC
     
 set(INC_SYS
     ${GLEW_INCLUDE_PATH}
-    ${LIBOVR_INCLUDE_PATH}
+    ${VR_INCLUDE_PATH}
 )
 
 set(SRC

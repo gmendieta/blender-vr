@@ -657,12 +657,12 @@ if (WITH_VR)
     endif()
     
     # Oculus
-    set(LIBOVR_INCLUDE_PATH ${VR_LIBDIR}/LibOVR/include)
-    set(LIBOVR_LIBRARIES 
+    set(VR_INCLUDE_PATH ${VR_LIBDIR}/LibOVR/include)
+    set(VR_LIBRARIES 
         optimized ${VR_LIBDIR}/LibOVR/lib/LibOVR.lib
-        debug ${VR_LIBDIR}/LibOVR/lib/LibOVRd.lib
+        debug ${VR_LIBDIR}/LibOVR/lib/LibOVR_d.lib
     )
-    set(LIBOVR_LIBPATH ${VR_LIBDIR}/LibOVR/lib)
+    set(VR_LIBPATH ${VR_LIBDIR}/LibOVR/lib)
 endif()
 
 if (WINDOWS_PYTHON_DEBUG)
