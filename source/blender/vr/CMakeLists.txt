@@ -30,9 +30,11 @@
 set(INC
     .
     ./intern
+    
     ../blenkernel
     ../blenlib
     ../blentranslation
+    ../depsgraph
     ../draw
     ../draw/intern
     ../editors/include
@@ -42,9 +44,11 @@ set(INC
     ../gpu
     ../makesdna
 	../makesrna
+    ../render/extern/include
     ../windowmanager
     
-    ../../../intern/glew_mx
+    ../../../extern/glew/include/GL
+    ../../../intern/glew-mx
     ../../../intern/guardedalloc
 )
     

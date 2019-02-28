@@ -76,6 +76,11 @@
 #  include "BKE_subsurf.h"
 #endif
 
+#include "../vr/vr_build.h"
+#ifdef WITH_VR
+#include "../vr/vr_vr.h"
+#endif
+
 
 /* ******************* paint cursor *************** */
 
@@ -139,6 +144,17 @@ static bool wm_draw_region_stereo_set(Main *bmain, ScrArea *sa, ARegion *ar, eSt
 		case SPACE_VIEW3D:
 		{
 			View3D *v3d = sa->spacedata.first;
+
+#ifdef WITH_VR
+			RegionView3D *rv3d = ar->regiondata;
+			if (rv3d->rflag & RV3D_VR)
+			{
+				v3d->stereo3d_flag |= V3D_S3D_DISPVR;
+				// Hide Text, Cursor and vavitation Gizmo
+				v3d->overlay.flag |= V3D_OVERLAY_HIDE_TEXT | V3D_OVERLAY_HIDE_CURSOR;
+				v3d->gizmo_flag |= V3D_GIZMO_HIDE_NAVIGATE;
+			}
+#endif
 			if (v3d->camera && v3d->camera->type == OB_CAMERA) {
 				Camera *cam = v3d->camera->data;
 				CameraBGImage *bgpic = cam->bg_images.first;
@@ -262,6 +278,14 @@ static void wm_draw_callbacks(wmWindow *win)
 
 static void wm_draw_region_buffer_free(ARegion *ar)
 {
+
+#ifdef WITH_VR
+	RegionView3D *rv3d = ar->regiondata;
+	if (rv3d && rv3d->rflag & RV3D_VR) {
+			vr_free_viewports(ar);
+	}
+#endif
+
 	if (ar->draw_buffer) {
 		for (int view = 0; view < 2; view++) {
 			if (ar->draw_buffer->offscreen[view]) {
@@ -527,6 +551,29 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
 
 		/* Compute UI layouts for dynamically size regions. */
 		for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
+#ifdef WITH_VR
+			wmWindow *win_vr = vr_get_window();
+			if (win_vr == win)
+			{
+				CTX_wm_region_set(C, ar);
+				vr_create_viewports(ar);
+
+				vr_beginFrame();
+
+				for (int view=0; view < 2; ++view)
+				{
+					wm_draw_region_stereo_set(bmain, sa, ar, view);
+					
+					vr_draw_region_bind(ar, view);
+					ED_region_do_draw(C, ar);
+					vr_draw_region_unbind(ar, view);
+				}
+
+				ar->do_draw = false;
+				CTX_wm_region_set(C, NULL);
+				continue;
+			}
+#endif
 			if (ar->visible && ar->do_draw && ar->type && ar->type->layout) {
 				CTX_wm_region_set(C, ar);
 				ED_region_do_layout(C, ar);
@@ -627,6 +674,28 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 	/* Blit non-overlapping area regions. */
 	ED_screen_areas_iter(win, screen, sa) {
 		for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
+
+#ifdef WITH_VR
+			RegionView3D *rv3d = ar->regiondata;
+			wmWindow *win_vr = vr_get_window();
+			if (win_vr == win && rv3d && rv3d->rflag & RV3D_VR)
+			{
+				vr_endFrame();
+				wmWindowViewport(win);
+				if (ar->draw_buffer)
+				{
+					if (ar->draw_buffer->offscreen[1])
+					{
+						wm_draw_region_blend(ar, 1, false);
+					}
+					else
+					{
+						wm_draw_region_blend(ar, 0, false);
+					}
+				}
+				continue;
+			}
+#endif
 			if (ar->visible && ar->overlap == false) {
 				if (view == -1 && ar->draw_buffer && ar->draw_buffer->stereo) {
 					/* Stereo drawing from textures. */

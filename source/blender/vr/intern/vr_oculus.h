@@ -8,18 +8,18 @@ class VROculus
 {
 public:
 
-	typedef enum TrackingOrigin
+	typedef enum _TrackingOrigin
 	{
 		FloorLevel, EyeLevel
-	};
+	}TrackingOrigin;
 
-	typedef struct HeadInfo
+	typedef struct _HeadInfo
 	{
 		float mPosition[3];					// World space Translation
 		float mRotation[4];					// World space Rotation (Quaternion)
-	};
+	}HeadInfo;
 
-	typedef struct EyeInfo
+	typedef struct _EyeInfo
 	{
 		float mPosition[3];					// World space Translation
 		float mRotation[4];					// World space Rotation (Quaternion)
@@ -27,30 +27,30 @@ public:
 		int mTextureSize[2];				// Recommended Texture Size (Width, Height)
 		ovrTextureSwapChain mTextureChain;	// Texture Buffer per Eye
 		ovrEyeRenderDesc mRenderDesc;
-	};
+	}EyeInfo;
 
-	typedef struct ControllerState
+	typedef struct _ControllerState
 	{
 		bool mEnabled;
 		uint64_t mButtons;					// Buttons Pressed. See vr_bitmask.h for encodings
 		float mThumbstick[2];				// ThumbStick vector [-1.0 (Left Bottom), 1.0 (Right Up)
 		float mIndexTrigger;				// Index Trigger pressure [0.0, 1.0]
 		float mHandTrigger;					// Hand Trigger pressure [0.0, 1.0]
-	};
+	}ControllerState;
 
-	typedef struct ControllerInfo
+	typedef struct _ControllerInfo
 	{
 		float mPosition[3];
 		float mRotation[4];
 		ControllerState mState;
-	};
+	}ControllerInfo;
 
-	typedef struct HmdInfo
+	typedef struct _HmdInfo
 	{
 		HeadInfo mHead;
 		EyeInfo mEye[2];
 		ControllerInfo mController[2];
-	};
+	}HmdInfo;
 
 
 	VROculus();

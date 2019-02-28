@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-typedef enum VRButtons
+typedef enum _VRButtons
 {
 	/// A button on XBox controllers and right Touch controller. Not present on Oculus Remote.
 	VR_BUTTON_A = uint64_t(1) << 0,
@@ -70,6 +70,6 @@ typedef enum VRButtons
 	VR_BUTTON_RIGHT = uint64_t(1) << 9,
 	*/
 
-};
+}VRButtons;
 
 #endif

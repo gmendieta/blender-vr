@@ -318,6 +318,7 @@ typedef struct View3D {
 #define V3D_S3D_DISPCAMERAS     (1 << 0)
 #define V3D_S3D_DISPPLANE       (1 << 1)
 #define V3D_S3D_DISPVOLUME      (1 << 2)
+#define V3D_S3D_DISPVR			(1 << 3)
 
 /* View3D->flag (short) */
 #define V3D_FLAG_DEPRECATED_0   (1 << 0)  /* cleared */
@@ -340,6 +341,7 @@ typedef struct View3D {
 #define RV3D_CLIPPING               (1 << 2)
 #define RV3D_NAVIGATING             (1 << 3)
 #define RV3D_GPULIGHT_UPDATE        (1 << 4)
+#define RV3D_VR						(1 << 5)
 /*#define RV3D_IS_GAME_ENGINE       (1 << 5) *//* UNUSED */
 /**
  * Disable zbuffer offset, skip calls to #ED_view3d_polygon_offset.

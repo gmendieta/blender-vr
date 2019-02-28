@@ -1027,9 +1027,8 @@ int wm_window_new_vr_exec(bContext *C, wmOperator *UNUSED(op))
 
 	vrWindow *vr = vr_get_instance();
 	// Only want VR for a window
-	if (vr->win_src)
+	if (vr_get_window() == win_src)
 	{
-		// Error Message
 		return OPERATOR_CANCELLED;
 	}
 
@@ -1039,9 +1038,7 @@ int wm_window_new_vr_exec(bContext *C, wmOperator *UNUSED(op))
 		return OPERATOR_CANCELLED;
 	}
 	vr_initialize();
-	// Initialize VR
-	// Store the Window as VR window
-	vr->win_src = win_src;
+	vr_set_window(win_src);
 
 #endif
 	return OPERATOR_FINISHED;
