@@ -281,8 +281,10 @@ static void wm_draw_region_buffer_free(ARegion *ar)
 
 #ifdef WITH_VR
 	RegionView3D *rv3d = ar->regiondata;
-	if (rv3d && rv3d->rflag & RV3D_VR) {
-			vr_free_viewports(ar);
+	ARegion *ar_vr = vr_region_get();
+	// We store the first RegionView3D found in the VR window because rv3d->rflag gives false positives because initialization
+	if (ar == ar_vr && rv3d && rv3d->rflag & RV3D_VR) {
+		vr_free_viewports(ar);
 	}
 #endif
 
@@ -552,16 +554,20 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
 		/* Compute UI layouts for dynamically size regions. */
 		for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
 #ifdef WITH_VR
-			wmWindow *win_vr = vr_get_window();
-			if (win_vr == win)
-			{
+			wmWindow *win_vr = vr_window_get();
+			ARegion *ar_vr = vr_region_get();
+			bool use_viewport = wm_region_use_viewport(sa, ar);
+			if (win_vr == win && (!ar_vr || ar == ar_vr) && use_viewport) {
 				CTX_wm_region_set(C, ar);
+				// Store the current VIEW3D
+				if (!ar_vr) {
+					vr_region_set(ar);
+				}
 				vr_create_viewports(ar);
 
-				vr_beginFrame();
+				vr_begin_frame();
 
-				for (int view=0; view < 2; ++view)
-				{
+				for (int view=0; view < 2; ++view) {
 					wm_draw_region_stereo_set(bmain, sa, ar, view);
 					
 					vr_draw_region_bind(ar, view);
@@ -677,10 +683,10 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 
 #ifdef WITH_VR
 			RegionView3D *rv3d = ar->regiondata;
-			wmWindow *win_vr = vr_get_window();
+			wmWindow *win_vr = vr_window_get();
 			if (win_vr == win && rv3d && rv3d->rflag & RV3D_VR)
 			{
-				vr_endFrame();
+				vr_end_frame();
 				wmWindowViewport(win);
 				if (ar->draw_buffer)
 				{

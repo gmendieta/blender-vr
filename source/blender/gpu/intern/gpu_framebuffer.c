@@ -561,6 +561,13 @@ bool GPU_framebuffer_check_valid(GPUFrameBuffer *fb, char err_out[256])
 	BLI_assert(GPU_framebuffer_bound(_fb)); \
 	UNUSED_VARS_NDEBUG(_fb);
 
+#ifdef WITH_VR
+uint GPU_framebuffer_bindcode(GPUFrameBuffer *fb)
+{
+	return fb->object;
+}
+#endif
+
 /* Needs to be done after binding. */
 void GPU_framebuffer_viewport_set(GPUFrameBuffer *fb, int x, int y, int w, int h)
 {

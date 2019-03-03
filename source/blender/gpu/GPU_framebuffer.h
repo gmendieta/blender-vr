@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+#include "../../vr/vr_build.h"
+
 struct GPUTexture;
 
 typedef struct GPUAttachment {
@@ -128,6 +130,10 @@ void GPU_framebuffer_config_array(GPUFrameBuffer *fb, const GPUAttachment *confi
         { .tex = _tex, .layer = _face, .mip = _mip, }
 
 /* Framebuffer operations */
+
+#ifdef WITH_VR
+uint GPU_framebuffer_bindcode(GPUFrameBuffer *fb);
+#endif
 
 void GPU_framebuffer_viewport_set(GPUFrameBuffer *fb, int x, int y, int w, int h);
 

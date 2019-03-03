@@ -530,6 +530,16 @@ void wm_window_close(bContext *C, wmWindowManager *wm, wmWindow *win)
 		ED_screen_exit(C, win, screen);
 	}
 
+#ifdef WITH_VR
+	wmWindow *win_vr = vr_window_get();
+	if (win_vr == win)
+	{
+		vr_shutdown();
+		vr_window_set(NULL);
+	}
+#endif // WITH_VR
+
+
 	wm_window_free(C, wm, win);
 
 	/* if temp screen, delete it after window free (it stops jobs that can access it) */
@@ -1025,20 +1035,20 @@ int wm_window_new_vr_exec(bContext *C, wmOperator *UNUSED(op))
 #ifdef WITH_VR
 	wmWindow *win_src = CTX_wm_window(C);
 
-	vrWindow *vr = vr_get_instance();
-	// Only want VR for a window
-	if (vr_get_window() == win_src)
+	wmWindow *win_vr = vr_window_get();
+	if (win_vr)
 	{
+		// TODO: Show already VR window message
 		return OPERATOR_CANCELLED;
 	}
 
-	wmWindow *vr_win = wm_window_copy_test(C, win_src, true, false);
-	if (!vr_win)
+	win_vr = wm_window_copy_test(C, win_src, true, false);
+	if (!win_vr)
 	{
 		return OPERATOR_CANCELLED;
 	}
-	vr_initialize();
-	vr_set_window(win_src);
+	int ok = vr_initialize(0, 0);
+	vr_window_set(win_vr);
 
 #endif
 	return OPERATOR_FINISHED;
@@ -1676,6 +1686,12 @@ void wm_window_process_events(const bContext *C)
 		GHOST_DispatchEvents(g_system);
 
 	hasevent |= wm_window_timer(C);
+
+#ifdef WITH_VR
+	if (vr_is_initialized()) {
+		return;
+	}
+#endif
 
 	/* no event, we sleep 5 milliseconds */
 	if (hasevent == 0)

@@ -1,12 +1,13 @@
 #include "vr_oculus.h"
-#include "LibOVR/Extras/OVR_Math.h"
 #include "vr_bitmask.h"
+
+#include "LibOVR/Extras/OVR_Math.h"
+#include "LibOVR/OVR_CAPI_GL.h"
 
 #include <string.h>
 
 
 using namespace OVR;
-
 
 VROculus::VROculus():
 	initialized(false),
@@ -26,12 +27,12 @@ int VROculus::initialize(void * device, void * context)
 {
 	if (ovr_Initialize(nullptr) != ovrSuccess)
 	{
-		return false;
+		return -1;
 	}
 	ovrResult result = ovr_Create(&mHmd, &mGraphicsLuid);
 	if (result != ovrSuccess)
 	{
-		return false;
+		return -1;
 	}
 	mHmdDesc = ovr_GetHmdDesc(mHmd);
 
@@ -61,41 +62,41 @@ int VROculus::initialize(void * device, void * context)
 	mInfo.mEye[1].mPosition[1] = eyeRenderDesc[1].HmdToEyePose.Position.y;
 	mInfo.mEye[1].mPosition[2] = eyeRenderDesc[1].HmdToEyePose.Position.z;
 
-// Create a TextureChain for each Eye
-for (int i = 0; i < 2; ++i)
-{
-	// Get the recommended Texture size for each eye
-	ovrSizei recommendedTextureSize = ovr_GetFovTextureSize(mHmd, ovrEyeType(i), mHmdDesc.DefaultEyeFov[i], 1);
-	mInfo.mEye[i].mTextureSize[0] = recommendedTextureSize.w;
-	mInfo.mEye[i].mTextureSize[1] = recommendedTextureSize.h;
-	ovrTextureSwapChainDesc desc = {};
-	desc.Type = ovrTexture_2D;
-	desc.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
-	desc.Width = recommendedTextureSize.w;
-	desc.Height = recommendedTextureSize.h;
-	desc.ArraySize = 1;
-	desc.MipLevels = 1;
-	desc.SampleCount = 1;
-	desc.StaticImage = false;
-
-	ovrResult result = ovr_CreateTextureSwapChainGL(mHmd, &desc, &mInfo.mEye[i].mTextureChain);
-	if (!OVR_SUCCESS(result))
+	// Create a TextureChain for each Eye
+	for (int i = 0; i < 2; ++i)
 	{
-		return -1;
+		// Get the recommended Texture size for each eye
+		ovrSizei recommendedTextureSize = ovr_GetFovTextureSize(mHmd, ovrEyeType(i), mHmdDesc.DefaultEyeFov[i], 1);
+		mInfo.mEye[i].mTextureSize[0] = recommendedTextureSize.w;
+		mInfo.mEye[i].mTextureSize[1] = recommendedTextureSize.h;
+		ovrTextureSwapChainDesc desc = {};
+		desc.Type = ovrTexture_2D;
+		desc.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
+		desc.Width = recommendedTextureSize.w;
+		desc.Height = recommendedTextureSize.h;
+		desc.ArraySize = 1;
+		desc.MipLevels = 1;
+		desc.SampleCount = 1;
+		desc.StaticImage = false;
+
+		ovrResult result = ovr_CreateTextureSwapChainGL(mHmd, &desc, &mInfo.mEye[i].mTextureChain);
+		if (!OVR_SUCCESS(result))
+		{
+			return -1;
+		}
+		// Just if needed
+		int length;
+		ovr_GetTextureSwapChainLength(mHmd, mInfo.mEye[i].mTextureChain, &length);
+
+		mLayer.ColorTexture[i] = mInfo.mEye[i].mTextureChain;
+		mLayer.Viewport[i] = { {0, 0}, {recommendedTextureSize.w, recommendedTextureSize.h} };
+		mLayer.Fov[i] = mHmdDesc.DefaultEyeFov[i];
 	}
-	// Just if needed
-	int length;
-	ovr_GetTextureSwapChainLength(mHmd, mInfo.mEye[i].mTextureChain, &length);
+	mLayer.Header.Type = ovrLayerType_EyeFov;
+	mLayer.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;
 
-	mLayer.ColorTexture[i] = mInfo.mEye[i].mTextureChain;
-	mLayer.Viewport[i] = { {0, 0}, {recommendedTextureSize.w, recommendedTextureSize.h} };
-	mLayer.Fov[i] = mHmdDesc.DefaultEyeFov[i];
-}
-mLayer.Header.Type = ovrLayerType_EyeFov;
-mLayer.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;
-
-initialized = true;
-return 0;
+	initialized = true;
+	return 0;
 }
 
 void VROculus::unintialize()
@@ -281,8 +282,6 @@ void VROculus::endFrame()
 		//ovr_ClearShouldRecenterFlag(mHmd); // Ignore the request
 		ovr_RecenterTrackingOrigin(mHmd);
 	}
-
-
 }
 
 int VROculus::getEyeFrustumTangents(unsigned int side, float projection[4])
