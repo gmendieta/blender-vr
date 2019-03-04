@@ -559,7 +559,7 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
 			bool use_viewport = wm_region_use_viewport(sa, ar);
 			if (win_vr == win && (!ar_vr || ar == ar_vr) && use_viewport) {
 				CTX_wm_region_set(C, ar);
-				// Store the current VIEW3D
+				// Store the current View3D
 				if (!ar_vr) {
 					vr_region_set(ar);
 				}
@@ -682,22 +682,17 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
 		for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
 
 #ifdef WITH_VR
-			RegionView3D *rv3d = ar->regiondata;
+			// Need to perform this check agains the Region to avoid crashes because sometimes rflags are not initialized
 			wmWindow *win_vr = vr_window_get();
-			if (win_vr == win && rv3d && rv3d->rflag & RV3D_VR)
+			ARegion *ar_vr = vr_region_get();
+			if (win_vr == win && ar == ar_vr)
 			{
 				vr_end_frame();
 				wmWindowViewport(win);
 				if (ar->draw_buffer)
 				{
-					if (ar->draw_buffer->offscreen[1])
-					{
-						wm_draw_region_blend(ar, 1, false);
-					}
-					else
-					{
-						wm_draw_region_blend(ar, 0, false);
-					}
+					// If we want to use the VR wmWindow we need to paint the last processed view (because of matrices)
+					wm_draw_region_blend(ar, 1, false);
 				}
 				continue;
 			}

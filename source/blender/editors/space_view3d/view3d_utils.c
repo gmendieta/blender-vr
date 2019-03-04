@@ -64,6 +64,9 @@
 
 #include "view3d_intern.h"  /* own include */
 
+#include "../vr/vr_build.h"
+#include "../vr/vr_vr.h"
+
 /* -------------------------------------------------------------------- */
 /** \name View Data Access Utilities
  *
@@ -153,7 +156,18 @@ bool ED_view3d_viewplane_get(
 
 	BKE_camera_params_init(&params);
 	BKE_camera_params_from_view3d(&params, depsgraph, v3d, rv3d);
+#ifdef WITH_VR
+	if (rv3d->rflag & RV3D_VR) {
+		vr_camera_params_compute_viewplane(v3d, &params, winx, winy, 1.0f, 1.0f);
+	}
+	else {
+		BKE_camera_params_compute_viewplane(&params, winx, winy, 1.0f, 1.0f);
+	}
+#endif
+#ifndef WITH_VR
 	BKE_camera_params_compute_viewplane(&params, winx, winy, 1.0f, 1.0f);
+#endif
+
 
 	if (r_viewplane) *r_viewplane = params.viewplane;
 	if (r_clip_start) *r_clip_start = params.clip_start;

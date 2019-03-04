@@ -1047,7 +1047,7 @@ int wm_window_new_vr_exec(bContext *C, wmOperator *UNUSED(op))
 	{
 		return OPERATOR_CANCELLED;
 	}
-	int ok = vr_initialize(0, 0);
+	int ok = vr_initialize();
 	vr_window_set(win_vr);
 
 #endif

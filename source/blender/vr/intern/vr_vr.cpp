@@ -27,6 +27,7 @@ extern "C"
 #endif
 
 #include "vr_vr.h"
+#include "vr_utils.h"
 
 // vr singleton
 static vrWindow vr;
@@ -37,7 +38,7 @@ vrWindow* vr_get_instance()
 	return &vr;
 }
 
-int vr_initialize(void *device, void *context)
+int vr_initialize()
 {
 	//vr.device = (HDC)device;
 	//vr.context = (HGLRC)context;
@@ -51,6 +52,19 @@ int vr_initialize(void *device, void *context)
 	}
 
 	vrHmd->getEyeTextureSize(0, &vr.texture_width, &vr.texture_height);
+	float left_fov[4];
+	float right_fov[4];
+	vrHmd->getEyeFrustumTangents(0, left_fov);
+	vr.eye_fov[0].up_tan = left_fov[0];
+	vr.eye_fov[0].down_tan = left_fov[1];
+	vr.eye_fov[0].left_tan = left_fov[2];
+	vr.eye_fov[0].right_tan = left_fov[3];
+
+	vrHmd->getEyeFrustumTangents(1, right_fov);
+	vr.eye_fov[1].up_tan = right_fov[0];
+	vr.eye_fov[1].down_tan = right_fov[1];
+	vr.eye_fov[1].left_tan = right_fov[2];
+	vr.eye_fov[1].right_tan = right_fov[3];
 
 	vr.initialized = 1;
 	return 1;
@@ -166,6 +180,90 @@ void vr_draw_region_unbind(struct ARegion *ar, int view)
 	ar->draw_buffer->bound_view = -1;
 }
 
+void vr_view_matrix_compute(uint view, float view_matrix[4][4])
+{
+	BLI_assert(vr.initialized);
+
+	float position[3];
+	float rotation[4];
+	float m[4][4];
+	vrHmd->getEyeTransform(view, position, rotation);
+	vr_view_matrix_build(rotation, position, m);
+	invert_m4_m4(view_matrix, m);
+}
+
+void vr_camera_params_compute_viewplane(const View3D *v3d, CameraParams *params, int winx, int winy, float xasp, float yasp)
+{
+	BLI_assert(vr.initialized);
+
+	rctf viewplane;
+	float pixsize, viewfac, sensor_size, dx, dy;
+	int sensor_fit;
+
+	float up_tan, down_tan, left_tan, right_tan;
+	int view = v3d->multiview_eye;
+
+	// Thanks to Blender XR
+	// Trigonometry: tangent = sine/cosine. In this case center/focal length
+	// Using UpTan and DownTan, we could derive this equation becuase focal length exists in both equations
+	float cy = 1.0f / ((vr.eye_fov[view].down_tan / vr.eye_fov[view].up_tan) + 1.0f);
+	float fy = cy / vr.eye_fov[view].up_tan;
+
+	float cx = 1.0f / ((vr.eye_fov[view].right_tan / vr.eye_fov[view].left_tan) + 1.0f);
+	float fx = cx / vr.eye_fov[view].left_tan;
+
+	params->ycor = yasp / xasp;
+
+	/* determine sensor fit */
+	sensor_fit = BKE_camera_sensor_fit(params->sensor_fit, xasp * vr.texture_width, yasp * vr.texture_height);
+
+	if (params->is_ortho) {
+		/* orthographic camera */
+		/* scale == 1.0 means exact 1 to 1 mapping */
+		pixsize = params->ortho_scale;
+	}
+	else {
+		/* perspective camera */
+		sensor_size = BKE_camera_sensor_size(params->sensor_fit, params->sensor_x, params->sensor_y);
+		if (sensor_fit == CAMERA_SENSOR_FIT_HOR) {
+			params->lens = fx * params->zoom * params->sensor_x;
+		}
+		else {
+			params->lens = fy * params->zoom * params->sensor_y;
+		}
+		pixsize = (sensor_size * params->clip_start) / params->lens;
+	}
+
+	if (sensor_fit == CAMERA_SENSOR_FIT_HOR) {
+		viewfac = vr.texture_width;
+	}
+	else {
+		viewfac = params->ycor * vr.texture_height;
+	}
+
+	pixsize /= viewfac;
+
+	/* extra zoom factor*/
+	pixsize *= params->zoom;
+
+	/* Compute view plane: centered and at a distance 1.0 */
+	// http://www.songho.ca/opengl/gl_projectionmatrix.html
+	viewplane.xmin = -vr.eye_fov[view].left_tan * params->clip_start;
+	viewplane.ymin = -vr.eye_fov[view].down_tan * params->clip_start;
+	viewplane.xmax = vr.eye_fov[view].right_tan * params->clip_start;
+	viewplane.ymax = vr.eye_fov[view].up_tan * params->clip_start;
+
+	/* lens shift */
+	params->offsetx = (2.0 * cx - 1.0f) * xasp;
+	params->offsety = (2.0 * cy - 1.0f) * yasp;
+
+	/* Used for rendering (offset by near-clip with perspective views), passed to RE_SetPixelSize.
+	* For viewport drawing 'RegionView3D.pixsize'. */
+	params->viewdx = pixsize;
+	params->viewdy = params->ycor * pixsize;
+	params->viewplane = viewplane;	
+}
+
 
 int vr_begin_frame()
 {
@@ -240,7 +338,6 @@ int vr_shutdown()
 
 	vr.win_vr = NULL;
 	vr.ar_vr = NULL;
-	//wglMakeCurrent(vr.device, vr.context);
 	
 	return 1;
 }

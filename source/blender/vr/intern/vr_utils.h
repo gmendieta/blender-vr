@@ -69,7 +69,7 @@ static void getGLViewMatrix(float q[4], float p[3], float mat[4][4])
 	mat[3][3] = 1.0f;
 }
 
-static void getBlenderViewMatrix(float q[4], float p[3], float mat[4][4])
+static void vr_view_matrix_build(float q[4], float p[3], float mat[4][4])
 {
 	// The different methods to convert a Quaternion to a Rotation matrix. We are using first one
 	// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm

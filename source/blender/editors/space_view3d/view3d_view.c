@@ -61,6 +61,9 @@
 
 #include "view3d_intern.h"  /* own include */
 
+#include "../vr/vr_build.h"
+#include "../vr/vr_vr.h"
+
 /* -------------------------------------------------------------------- */
 /** \name Smooth View Operator & Utilities
  *
@@ -801,7 +804,18 @@ void view3d_viewmatrix_set(
 			use_lock_ofs = true;
 		}
 		else {
+#ifdef WITH_VR
+			/* We dont want to modify Blender standard behaviour, so if the camera is set to an object or to cursor we just let it be */
+			if (rv3d->rflag & RV3D_VR) {
+				vr_view_matrix_compute(v3d->multiview_eye, rv3d->viewmat);
+			}
+			else {
+				translate_m4(rv3d->viewmat, rv3d->ofs[0], rv3d->ofs[1], rv3d->ofs[2]);
+			}
+#endif
+#ifndef WITH_VR
 			translate_m4(rv3d->viewmat, rv3d->ofs[0], rv3d->ofs[1], rv3d->ofs[2]);
+#endif
 		}
 
 		/* lock offset */
