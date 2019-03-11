@@ -2,6 +2,7 @@
 //#include "vr_oculus.h"
 
 #include "vr_oculus.h"
+#include "vr_ui_manager.h"
 
 extern "C"
 {
@@ -28,10 +29,12 @@ extern "C"
 
 #include "vr_vr.h"
 #include "vr_utils.h"
+#include "vr_types.h"
 
 // vr singleton
 static vrWindow vr;
-static VROculus *vrHmd { nullptr };
+static VR_Oculus *vrHmd { nullptr };
+static VR_UIManager *vrUiManager{ nullptr };
 
 vrWindow* vr_get_instance()
 {
@@ -44,27 +47,30 @@ int vr_initialize()
 	//vr.context = (HGLRC)context;
 	//wglMakeCurrent(vr.device, vr.context);
 
-	vrHmd = new VROculus();
+	vrHmd = new VR_Oculus();
+	vrUiManager = new VR_UIManager();
 	int ok = vrHmd->initialize(nullptr, nullptr);
 	if (ok < 0) {
 		vr.initialized = 0;
 		return 0;
 	}
 
+	vrHmd->setTrackingOrigin(VR_TrackingOrigin::VR_FLOOR_LEVEL);
+
 	vrHmd->getEyeTextureSize(0, &vr.texture_width, &vr.texture_height);
 	float left_fov[4];
 	float right_fov[4];
 	vrHmd->getEyeFrustumTangents(0, left_fov);
-	vr.eye_fov[0].up_tan = left_fov[0];
-	vr.eye_fov[0].down_tan = left_fov[1];
-	vr.eye_fov[0].left_tan = left_fov[2];
-	vr.eye_fov[0].right_tan = left_fov[3];
+	vr.eye_fov[VR_LEFT].up_tan = left_fov[0];
+	vr.eye_fov[VR_LEFT].down_tan = left_fov[1];
+	vr.eye_fov[VR_LEFT].left_tan = left_fov[2];
+	vr.eye_fov[VR_LEFT].right_tan = left_fov[3];
 
 	vrHmd->getEyeFrustumTangents(1, right_fov);
-	vr.eye_fov[1].up_tan = right_fov[0];
-	vr.eye_fov[1].down_tan = right_fov[1];
-	vr.eye_fov[1].left_tan = right_fov[2];
-	vr.eye_fov[1].right_tan = right_fov[3];
+	vr.eye_fov[VR_RIGHT].up_tan = right_fov[0];
+	vr.eye_fov[VR_RIGHT].down_tan = right_fov[1];
+	vr.eye_fov[VR_RIGHT].left_tan = right_fov[2];
+	vr.eye_fov[VR_RIGHT].right_tan = right_fov[3];
 
 	vr.initialized = 1;
 	return 1;
@@ -180,16 +186,29 @@ void vr_draw_region_unbind(struct ARegion *ar, int view)
 	ar->draw_buffer->bound_view = -1;
 }
 
-void vr_view_matrix_compute(uint view, float view_matrix[4][4])
+void vr_view_matrix_compute(uint view, float viewmat[4][4])
 {
 	BLI_assert(vr.initialized);
 
 	float position[3];
 	float rotation[4];
-	float m[4][4];
+	float head_matrix[4][4];
+	float eye_matrix[4][4];
+	float nav_matrix[4][4];
+	float view_matrix[4][4];
+
 	vrHmd->getEyeTransform(view, position, rotation);
-	vr_view_matrix_build(rotation, position, m);
-	invert_m4_m4(view_matrix, m);
+	vr_oculus_blender_matrix_build(rotation, position, eye_matrix);
+	vrUiManager->getNavMatrix(nav_matrix);
+	mul_m4_m4m4(view_matrix, nav_matrix, eye_matrix);
+
+	// Update Ui Manager View
+	vrHmd->getHmdTransform(position, rotation);
+	vr_oculus_blender_matrix_build(rotation, position, head_matrix);
+
+	// Copied from obmat_to_viewmat
+	normalize_m4_m4(viewmat, view_matrix);
+	invert_m4(viewmat);
 }
 
 void vr_camera_params_compute_viewplane(const View3D *v3d, CameraParams *params, int winx, int winy, float xasp, float yasp)
@@ -200,10 +219,9 @@ void vr_camera_params_compute_viewplane(const View3D *v3d, CameraParams *params,
 	float pixsize, viewfac, sensor_size, dx, dy;
 	int sensor_fit;
 
-	float up_tan, down_tan, left_tan, right_tan;
 	int view = v3d->multiview_eye;
 
-	// Thanks to Blender XR
+	// Thanks to BlenderXR
 	// Trigonometry: tangent = sine/cosine. In this case center/focal length
 	// Using UpTan and DownTan, we could derive this equation becuase focal length exists in both equations
 	float cy = 1.0f / ((vr.eye_fov[view].down_tan / vr.eye_fov[view].up_tan) + 1.0f);
@@ -261,14 +279,33 @@ void vr_camera_params_compute_viewplane(const View3D *v3d, CameraParams *params,
 	* For viewport drawing 'RegionView3D.pixsize'. */
 	params->viewdx = pixsize;
 	params->viewdy = params->ycor * pixsize;
-	params->viewplane = viewplane;	
+	params->viewplane = viewplane;
 }
 
 
 int vr_begin_frame()
 {
 	BLI_assert(vr.initialized);
+
+	// Update all VR states and tracking
 	vrHmd->beginFrame();
+	
+	// Compute the Ui view matrix based on Head and current Navigation matrix
+	float position[3];
+	float rotation[4];
+	float head_matrix[4][4];
+	float nav_matrix[4][4];
+	float view_matrix[4][4];
+
+	// Set Ui view matrix
+	vrHmd->getHmdTransform(position, rotation);
+	vr_oculus_blender_matrix_build(rotation, position, head_matrix);
+	vrUiManager->getNavMatrix(nav_matrix);
+	mul_m4_m4m4(view_matrix, nav_matrix, head_matrix);
+	vrUiManager->setViewMatrix(view_matrix);
+
+	// Update Input
+	vr_process_input();
 	return 1;
 }
 
@@ -282,7 +319,7 @@ int vr_end_frame()
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
 	
-	for (int view = 0; view < 2; ++view)
+	for (int view = 0; view < VR_MAX_SIDES; ++view)
 	{
 		uint vr_texture_bindcode;
 		uint view_texture_bindcode;
@@ -320,6 +357,22 @@ int vr_end_frame()
 	return 1;
 }
 
+void vr_process_input()
+{
+	VR_ControllerState lControllerState;
+	VR_ControllerState rControllerState;
+
+	// Update left controller state
+	vrHmd->getControllerState(VR_LEFT, &lControllerState);
+	vrUiManager->setControllerState(VR_LEFT, lControllerState);
+
+	// Update right controller state
+	vrHmd->getControllerState(VR_RIGHT, &rControllerState);
+	vrUiManager->setControllerState(VR_RIGHT, rControllerState);
+
+	vrUiManager->processUserInput();
+}
+
 int vr_get_eye_texture_size(int *width, int *height)
 {
 	BLI_assert(vr.initialized);
@@ -334,6 +387,11 @@ int vr_shutdown()
 	if (vrHmd) {
 		vrHmd->unintialize();
 		delete vrHmd;
+		vrHmd = nullptr;
+	}
+	if (vrUiManager) {
+		delete vrUiManager;
+		vrUiManager = nullptr;
 	}
 
 	vr.win_vr = NULL;

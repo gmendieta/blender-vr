@@ -1,15 +1,13 @@
 #include "vr_oculus.h"
-#include "vr_bitmask.h"
 
 #include "LibOVR/Extras/OVR_Math.h"
 #include "LibOVR/OVR_CAPI_GL.h"
 
-#include <string.h>
-
+#include <string.h>	// memcpy
 
 using namespace OVR;
 
-VROculus::VROculus():
+VR_Oculus::VR_Oculus():
 	initialized(false),
 	mFrame(0),
 	mHmd(0)							// nullptr?
@@ -18,12 +16,12 @@ VROculus::VROculus():
 	memset(&mLayer, 0, sizeof(mLayer));
 }
 
-VROculus::~VROculus()
+VR_Oculus::~VR_Oculus()
 {
 	unintialize();
 }
 
-int VROculus::initialize(void * device, void * context)
+int VR_Oculus::initialize(void * device, void * context)
 {
 	if (ovr_Initialize(nullptr) != ovrSuccess)
 	{
@@ -99,7 +97,7 @@ int VROculus::initialize(void * device, void * context)
 	return 0;
 }
 
-void VROculus::unintialize()
+void VR_Oculus::unintialize()
 {
 	if (initialized)
 	{
@@ -115,7 +113,7 @@ void VROculus::unintialize()
 	}
 }
 
-void VROculus::beginFrame()
+void VR_Oculus::beginFrame()
 {
 	++mFrame;
 
@@ -140,6 +138,20 @@ void VROculus::beginFrame()
 	ovrTrackingState hmdState = ovr_GetTrackingState(mHmd, predictedDisplayTime, ovrTrue);
 	ovr_CalcEyePoses(hmdState.HeadPose.ThePose, hmdToEyeOffset, eyeRenderPose);
 
+
+	/////////////////////////////////////
+	// Head state
+	/////////////////////////////////////
+
+	mInfo.mHead.mPosition[0] = hmdState.HeadPose.ThePose.Position.x;
+	mInfo.mHead.mPosition[1] = hmdState.HeadPose.ThePose.Position.y;
+	mInfo.mHead.mPosition[2] = hmdState.HeadPose.ThePose.Position.z;
+
+	mInfo.mHead.mRotation[0] = hmdState.HeadPose.ThePose.Orientation.x;
+	mInfo.mHead.mRotation[1] = hmdState.HeadPose.ThePose.Orientation.y;
+	mInfo.mHead.mRotation[2] = hmdState.HeadPose.ThePose.Orientation.z;
+	mInfo.mHead.mRotation[3] = hmdState.HeadPose.ThePose.Orientation.w;
+
 	/////////////////////////////////////
 	// Eyes state
 	/////////////////////////////////////
@@ -148,6 +160,7 @@ void VROculus::beginFrame()
 	mInfo.mEye[0].mPosition[0] = mLayer.RenderPose[0].Position.x;
 	mInfo.mEye[0].mPosition[1] = mLayer.RenderPose[0].Position.y;
 	mInfo.mEye[0].mPosition[2] = mLayer.RenderPose[0].Position.z;
+
 	mInfo.mEye[0].mRotation[0] = mLayer.RenderPose[0].Orientation.x;
 	mInfo.mEye[0].mRotation[1] = mLayer.RenderPose[0].Orientation.y;
 	mInfo.mEye[0].mRotation[2] = mLayer.RenderPose[0].Orientation.z;
@@ -157,6 +170,7 @@ void VROculus::beginFrame()
 	mInfo.mEye[1].mPosition[0] = mLayer.RenderPose[1].Position.x;
 	mInfo.mEye[1].mPosition[1] = mLayer.RenderPose[1].Position.y;
 	mInfo.mEye[1].mPosition[2] = mLayer.RenderPose[1].Position.z;
+
 	mInfo.mEye[1].mRotation[0] = mLayer.RenderPose[1].Orientation.x;
 	mInfo.mEye[1].mRotation[1] = mLayer.RenderPose[1].Orientation.y;
 	mInfo.mEye[1].mRotation[2] = mLayer.RenderPose[1].Orientation.z;
@@ -167,36 +181,36 @@ void VROculus::beginFrame()
 	/////////////////////////////////////
 
 	// Just modify the availability state
-	mInfo.mController[0].mState.mEnabled = false;
-	mInfo.mController[1].mState.mEnabled = false;
+	mInfo.mController[VR_LEFT].mEnabled = false;
+	mInfo.mController[VR_RIGHT].mEnabled = false;
 	
 	if (hmdState.HandStatusFlags[ovrHand_Left] & ovrStatus_PositionTracked)
 	{
-		mInfo.mController[0].mState.mEnabled = true;
+		mInfo.mController[VR_LEFT].mEnabled = true;
 		// Position
-		mInfo.mController[0].mPosition[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.x;
-		mInfo.mController[0].mPosition[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.y;
-		mInfo.mController[0].mPosition[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.z;
+		mInfo.mController[VR_LEFT].mPosition[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.x;
+		mInfo.mController[VR_LEFT].mPosition[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.y;
+		mInfo.mController[VR_LEFT].mPosition[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.z;
 		// Orientation
-		mInfo.mController[0].mRotation[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.x;
-		mInfo.mController[0].mRotation[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.y;
-		mInfo.mController[0].mRotation[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.z;
-		mInfo.mController[0].mRotation[3] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.w;
+		mInfo.mController[VR_LEFT].mRotation[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.x;
+		mInfo.mController[VR_LEFT].mRotation[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.y;
+		mInfo.mController[VR_LEFT].mRotation[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.z;
+		mInfo.mController[VR_LEFT].mRotation[3] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.w;
 
 		ovrInputState inputState;
 		ovr_GetInputState(mHmd, ovrControllerType_LTouch, &inputState);
 
 		// Thumb Stick Movement
 		ovrVector2f &thumbStickMovement = inputState.Thumbstick[ovrHand_Left];
-		mInfo.mController[0].mState.mThumbstick[0] = thumbStickMovement.x;
-		mInfo.mController[0].mState.mThumbstick[1] = thumbStickMovement.y;
+		mInfo.mController[VR_LEFT].mThumbstick[0] = thumbStickMovement.x;
+		mInfo.mController[VR_LEFT].mThumbstick[1] = thumbStickMovement.y;
 
 		// Triggers
-		mInfo.mController[0].mState.mIndexTrigger = inputState.IndexTrigger[ovrHand_Left];
-		mInfo.mController[0].mState.mHandTrigger = inputState.HandTrigger[ovrHand_Left];
+		mInfo.mController[VR_LEFT].mIndexTrigger = inputState.IndexTrigger[ovrHand_Left];
+		mInfo.mController[VR_LEFT].mHandTrigger = inputState.HandTrigger[ovrHand_Left];
 
 		// Buttons
-		uint64_t &buttons = mInfo.mController[0].mState.mButtons;
+		uint64_t &buttons = mInfo.mController[VR_LEFT].mButtons;
 		buttons = 0;
 		if (inputState.Buttons & ovrTouch_X)
 			buttons |= VR_BUTTON_X;
@@ -234,26 +248,69 @@ void VROculus::beginFrame()
 	}
 	if (hmdState.HandStatusFlags[ovrHand_Right] & ovrStatus_PositionTracked)
 	{
-		mInfo.mController[1].mState.mEnabled = true;
+		mInfo.mController[VR_RIGHT].mEnabled = true;
 		// Position
-		mInfo.mController[1].mPosition[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.x;
-		mInfo.mController[1].mPosition[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.y;
-		mInfo.mController[1].mPosition[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.z;
+		mInfo.mController[VR_RIGHT].mPosition[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.x;
+		mInfo.mController[VR_RIGHT].mPosition[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.y;
+		mInfo.mController[VR_RIGHT].mPosition[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.z;
 		// Orientation
-		mInfo.mController[1].mRotation[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.x;
-		mInfo.mController[1].mRotation[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.y;
-		mInfo.mController[1].mRotation[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.z;
-		mInfo.mController[1].mRotation[3] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.w;
+		mInfo.mController[VR_RIGHT].mRotation[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.x;
+		mInfo.mController[VR_RIGHT].mRotation[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.y;
+		mInfo.mController[VR_RIGHT].mRotation[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.z;
+		mInfo.mController[VR_RIGHT].mRotation[3] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.w;
 
 		ovrInputState inputState;
 		ovr_GetInputState(mHmd, ovrControllerType_RTouch, &inputState);
-		// Thumb Stick
+
+		// Thumb Stick Movement
 		ovrVector2f &thumbStickMovement = inputState.Thumbstick[ovrHand_Right];
-		memcpy(mInfo.mController[0].mState.mThumbstick, &thumbStickMovement, 2 * sizeof(float));
+		mInfo.mController[VR_RIGHT].mThumbstick[0] = thumbStickMovement.x;
+		mInfo.mController[VR_RIGHT].mThumbstick[1] = thumbStickMovement.y;
+
+		// Triggers
+		mInfo.mController[VR_RIGHT].mIndexTrigger = inputState.IndexTrigger[ovrHand_Right];
+		mInfo.mController[VR_RIGHT].mHandTrigger = inputState.HandTrigger[ovrHand_Right];
+
+		// Buttons
+		uint64_t &buttons = mInfo.mController[VR_RIGHT].mButtons;
+		buttons = 0;
+		if (inputState.Buttons & ovrTouch_A)
+			buttons |= VR_BUTTON_A;
+
+		if (inputState.Buttons & ovrTouch_B)
+			buttons |= VR_BUTTON_B;
+
+		if (inputState.Buttons & ovrTouch_RThumb)
+			buttons |= VR_BUTTON_RTHUMB;
+
+		if (inputState.Buttons & ovrTouch_RThumbRest)
+			buttons |= VR_BUTTON_RTHUMB_REST;
+
+		// Seems that does not work properly
+		//if (inputState.Buttons & ovrTouch_LIndexTrigger)
+		if (inputState.IndexTrigger[ovrHand_Right] > 0.8f)
+			buttons |= VR_BUTTON_RINDEX_TRIGGER;
+
+		if (inputState.HandTrigger[ovrHand_Right] > 0.8f)
+			buttons |= VR_BUTTON_RHAND_TRIGGER;
+
+		if (inputState.Buttons & ovrButton_Home)
+			buttons |= VR_BUTTON_HOME;
+
+		// Thumbstick Swipes
+		if (thumbStickMovement.x > 0.8f)
+			buttons |= VR_THUMBSTICK_SWIPE_RIGHT;
+		else if (thumbStickMovement.x < -0.8f)
+			buttons |= VR_THUMBSTICK_SWIPE_LEFT;
+
+		if (thumbStickMovement.y > 0.8f)
+			buttons |= VR_THUMBSTICK_SWIPE_UP;
+		else if (thumbStickMovement.y < -0.8f)
+			buttons |= VR_THUMBSTICK_SWIPE_DOWN;
 	}
 }
 
-void VROculus::endFrame()
+void VR_Oculus::endFrame()
 {
 	ovr_CommitTextureSwapChain(mHmd, mInfo.mEye[0].mTextureChain);
 	ovr_CommitTextureSwapChain(mHmd, mInfo.mEye[1].mTextureChain);
@@ -284,7 +341,7 @@ void VROculus::endFrame()
 	}
 }
 
-int VROculus::getEyeFrustumTangents(unsigned int side, float projection[4])
+int VR_Oculus::getEyeFrustumTangents(unsigned int side, float projection[4])
 {
 	if (!initialized)
 	{
@@ -294,7 +351,7 @@ int VROculus::getEyeFrustumTangents(unsigned int side, float projection[4])
 	return 0;
 }
 
-int VROculus::recenterTrackingOrigin()
+int VR_Oculus::recenterTrackingOrigin()
 {
 	if (!initialized)
 	{
@@ -304,7 +361,7 @@ int VROculus::recenterTrackingOrigin()
 	return 0;
 }
 
-int VROculus::setTrackingOrigin(TrackingOrigin type)
+int VR_Oculus::setTrackingOrigin(VR_TrackingOrigin type)
 {
 	if (!initialized)
 	{
@@ -313,10 +370,10 @@ int VROculus::setTrackingOrigin(TrackingOrigin type)
 
 	switch (type)
 	{
-	case FloorLevel:
+	case VR_FLOOR_LEVEL:
 		ovr_SetTrackingOriginType(mHmd, ovrTrackingOrigin_FloorLevel);
 		break;
-	case EyeLevel:
+	case VR_EYE_LEVEL:
 		ovr_SetTrackingOriginType(mHmd, ovrTrackingOrigin_EyeLevel);
 		break;
 	}
@@ -324,7 +381,7 @@ int VROculus::setTrackingOrigin(TrackingOrigin type)
 }
 
 
-int VROculus::getHmdTransform(float position[3], float rotation[4])
+int VR_Oculus::getHmdTransform(float position[3], float rotation[4])
 {
 	if (!initialized)
 	{
@@ -335,7 +392,7 @@ int VROculus::getHmdTransform(float position[3], float rotation[4])
 	return 0;
 }
 
-int VROculus::getEyeTransform(unsigned int side, float position[3], float rotation[4])
+int VR_Oculus::getEyeTransform(unsigned int side, float position[3], float rotation[4])
 {
 	if (!initialized)
 	{
@@ -346,7 +403,7 @@ int VROculus::getEyeTransform(unsigned int side, float position[3], float rotati
 	return 0;
 }
 
-int VROculus::getEyeTextureIdx(unsigned int side, unsigned int *textureIdx)
+int VR_Oculus::getEyeTextureIdx(unsigned int side, unsigned int *textureIdx)
 {
 	if (!initialized)
 	{
@@ -358,7 +415,7 @@ int VROculus::getEyeTextureIdx(unsigned int side, unsigned int *textureIdx)
 	return 0;
 }
 
-int VROculus::getEyeTextureSize(unsigned int side, int *width, int *height)
+int VR_Oculus::getEyeTextureSize(unsigned int side, int *width, int *height)
 {
 	if (!initialized)
 	{
@@ -369,7 +426,7 @@ int VROculus::getEyeTextureSize(unsigned int side, int *width, int *height)
 	return 0;
 }
 
-int VROculus::getControllerTransform(unsigned int side, float position[3], float rotation[4])
+int VR_Oculus::getControllerTransform(unsigned int side, float position[3], float rotation[4])
 {
 	if (!initialized)
 	{
@@ -380,13 +437,13 @@ int VROculus::getControllerTransform(unsigned int side, float position[3], float
 	return 0;
 }
 
-int VROculus::getControllerState(unsigned int side, void * controllerState)
+int VR_Oculus::getControllerState(unsigned int side, void * controllerState)
 {
 	if (!initialized)
 	{
 		return -1;
 	}
-	memcpy(controllerState, &mInfo.mController[side].mState, sizeof(ControllerState));
+	memcpy(controllerState, &mInfo.mController[side], sizeof(VR_ControllerState));
 	return 0;
 }
 

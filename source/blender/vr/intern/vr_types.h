@@ -1,9 +1,22 @@
-#ifndef vr_bitmask_h
-#define vr_bitmask_h
+#ifndef __VR_TYPES_H__
+#define __VR_TYPES_H__
 
 #include <stdint.h>
 
-typedef enum _VRButtons
+typedef enum _VR_Side
+{
+	VR_LEFT,
+	VR_RIGHT,
+	VR_MAX_SIDES,
+};
+
+typedef enum _VR_TrackingOrigin
+{
+	VR_FLOOR_LEVEL,
+	VR_EYE_LEVEL,
+} VR_TrackingOrigin;
+
+typedef enum _VR_Buttons
 {
 	/// A button on XBox controllers and right Touch controller. Not present on Oculus Remote.
 	VR_BUTTON_A = uint64_t(1) << 0,
@@ -70,6 +83,18 @@ typedef enum _VRButtons
 	VR_BUTTON_RIGHT = uint64_t(1) << 9,
 	*/
 
-}VRButtons;
+} VR_Buttons;
 
-#endif
+typedef struct _VR_ControllerState
+{
+	bool mEnabled;
+	float mPosition[3];
+	float mRotation[4];
+	uint64_t mButtons;					// Buttons Pressed. See vr_bitmask.h for encodings
+	float mThumbstick[2];				// ThumbStick vector [-1.0 (Left Bottom), 1.0 (Right Up)
+	float mIndexTrigger;				// Index Trigger pressure [0.0, 1.0]
+	float mHandTrigger;					// Hand Trigger pressure [0.0, 1.0]
+} VR_ControllerState;
+
+
+#endif // __VR_TYPES_H__

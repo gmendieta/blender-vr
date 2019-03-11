@@ -3,15 +3,11 @@
 
 #include "LibOVR/OVR_CAPI_GL.h"
 
+#include "vr_types.h"
 
-class VROculus
+class VR_Oculus
 {
 public:
-
-	typedef enum _TrackingOrigin
-	{
-		FloorLevel, EyeLevel
-	}TrackingOrigin;
 
 	typedef struct _HeadInfo
 	{
@@ -29,32 +25,16 @@ public:
 		ovrEyeRenderDesc mRenderDesc;
 	}EyeInfo;
 
-	typedef struct _ControllerState
-	{
-		bool mEnabled;
-		uint64_t mButtons;					// Buttons Pressed. See vr_bitmask.h for encodings
-		float mThumbstick[2];				// ThumbStick vector [-1.0 (Left Bottom), 1.0 (Right Up)
-		float mIndexTrigger;				// Index Trigger pressure [0.0, 1.0]
-		float mHandTrigger;					// Hand Trigger pressure [0.0, 1.0]
-	}ControllerState;
-
-	typedef struct _ControllerInfo
-	{
-		float mPosition[3];
-		float mRotation[4];
-		ControllerState mState;
-	}ControllerInfo;
-
 	typedef struct _HmdInfo
 	{
 		HeadInfo mHead;
 		EyeInfo mEye[2];
-		ControllerInfo mController[2];
+		VR_ControllerState mController[2];
 	}HmdInfo;
 
 
-	VROculus();
-	~VROculus();
+	VR_Oculus();
+	~VR_Oculus();
 
 	int initialize(void *device, void *context);
 	void unintialize();
@@ -66,7 +46,7 @@ public:
 	/// Recenters the Origin
 	int recenterTrackingOrigin();
 	/// Set the Tracking origin type. It may be Floor or Eye
-	int setTrackingOrigin(TrackingOrigin type);
+	int setTrackingOrigin(VR_TrackingOrigin type);
 	/// Get the Head transformation matrix
 	int getHmdTransform(float position[3], float rotation[4]);
 	/// Get the Frustum Tangents values for an Eye. Side may be 0 for Left eye and 1 for Right eye

@@ -60,16 +60,18 @@ set(INC_SYS
 set(SRC
     intern/vr_vr.cpp
     intern/vr_math.cpp
+    intern/vr_ui_manager.cpp
     intern/vr_oculus.cpp
 
     vr_build.h
     vr_api.h
     vr_vr.h
     
+    intern/vr_types.h
     intern/vr_math.h
-    intern/vr_oculus.h
-    intern/vr_bitmask.h
     intern/vr_utils.h
+    intern/vr_ui_manager.h
+    intern/vr_oculus.h
 )
 
 add_definitions(${GL_DEFINITIONS})
