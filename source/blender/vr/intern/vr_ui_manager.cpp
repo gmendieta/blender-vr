@@ -5,6 +5,7 @@
 
 #include "BLI_math_matrix.h"
 
+static const float VR_FLY_MAX_SPEED = 0.5f;
 
 VR_UIManager::VR_UIManager()
 {
@@ -14,6 +15,7 @@ VR_UIManager::VR_UIManager()
 	unit_m4(m_navStartMatrix);
 	unit_m4(m_navMatrix);
 	unit_m4(m_navInvMatrix);
+	m_flyMaxSpeed = VR_FLY_MAX_SPEED;
 }
 
 VR_UIManager::~VR_UIManager()
@@ -55,6 +57,7 @@ void VR_UIManager::computeNavMatrix()
 			m_isNavigating = true;
 		}
 		else {
+			////// Navigation ///////
 			float navMatrix[4][4];
 			float navInvMatrix[4][4];
 			float deltaMatrix[4][4];
@@ -72,6 +75,12 @@ void VR_UIManager::computeNavMatrix()
 			mul_m4_m4_pre(m_navMatrix, deltaMatrix);
 			// Store current navigation inverse for next iteration
 			invert_m4_m4(m_navInvMatrix, m_navMatrix);
+
+
+			////// Fly ///////
+			float right = m_currentState[VR_RIGHT].mThumbstick[0] * VR_FLY_MAX_SPEED;
+			float forward = m_currentState[VR_RIGHT].mThumbstick[1] * VR_FLY_MAX_SPEED;
+			translate_m4(m_navMatrix, right, forward, 0.0f);
 		}
 	}
 	else if (previousHandTrigger) {

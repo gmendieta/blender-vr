@@ -91,7 +91,7 @@ typedef struct _VR_ControllerState
 	float mPosition[3];
 	float mRotation[4];
 	uint64_t mButtons;					// Buttons Pressed. See vr_bitmask.h for encodings
-	float mThumbstick[2];				// ThumbStick vector [-1.0 (Left Bottom), 1.0 (Right Up)
+	float mThumbstick[2];				// ThumbStick vector {[-1.0, 1.0], [-1.0, 1.0]} {Left/Right, Bottom/Up}
 	float mIndexTrigger;				// Index Trigger pressure [0.0, 1.0]
 	float mHandTrigger;					// Hand Trigger pressure [0.0, 1.0]
 } VR_ControllerState;
