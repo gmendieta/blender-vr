@@ -293,7 +293,7 @@ void BKE_image_free(Image *ima)
 /* only image block itself */
 static void image_init(Image *ima, short source, short type)
 {
-	BLI_assert(MEMCMP_STRUCT_OFS_IS_ZERO(ima, id));
+	BLI_assert(MEMCMP_STRUCT_AFTER_IS_ZERO(ima, id));
 
 	ima->ok = IMA_OK;
 
@@ -556,7 +556,7 @@ Image *BKE_image_load_exists_ex(Main *bmain, const char *filepath, bool *r_exist
 	BLI_path_abs(str, BKE_main_blendfile_path_from_global());
 
 	/* first search an identical filepath */
-	for (ima = bmain->image.first; ima; ima = ima->id.next) {
+	for (ima = bmain->images.first; ima; ima = ima->id.next) {
 		if (ima->source != IMA_SRC_VIEWER && ima->source != IMA_SRC_GENERATED) {
 			STRNCPY(strtest, ima->name);
 			BLI_path_abs(strtest, ID_BLEND_PATH(bmain, &ima->id));
@@ -912,12 +912,12 @@ void BKE_image_print_memlist(Main *bmain)
 	Image *ima;
 	uintptr_t size, totsize = 0;
 
-	for (ima = bmain->image.first; ima; ima = ima->id.next)
+	for (ima = bmain->images.first; ima; ima = ima->id.next)
 		totsize += image_mem_size(ima);
 
 	printf("\ntotal image memory len: %.3f MB\n", (double)totsize / (double)(1024 * 1024));
 
-	for (ima = bmain->image.first; ima; ima = ima->id.next) {
+	for (ima = bmain->images.first; ima; ima = ima->id.next) {
 		size = image_mem_size(ima);
 
 		if (size)
@@ -940,14 +940,14 @@ void BKE_image_free_all_textures(Main *bmain)
 	uintptr_t tot_freed_size = 0;
 #endif
 
-	for (ima = bmain->image.first; ima; ima = ima->id.next)
+	for (ima = bmain->images.first; ima; ima = ima->id.next)
 		ima->id.tag &= ~LIB_TAG_DOIT;
 
-	for (tex = bmain->tex.first; tex; tex = tex->id.next)
+	for (tex = bmain->textures.first; tex; tex = tex->id.next)
 		if (tex->ima)
 			tex->ima->id.tag |= LIB_TAG_DOIT;
 
-	for (ima = bmain->image.first; ima; ima = ima->id.next) {
+	for (ima = bmain->images.first; ima; ima = ima->id.next) {
 		if (ima->cache && (ima->id.tag & LIB_TAG_DOIT)) {
 #ifdef CHECK_FREED_SIZE
 			uintptr_t old_size = image_mem_size(ima);
@@ -987,7 +987,7 @@ void BKE_image_all_free_anim_ibufs(Main *bmain, int cfra)
 {
 	Image *ima;
 
-	for (ima = bmain->image.first; ima; ima = ima->id.next)
+	for (ima = bmain->images.first; ima; ima = ima->id.next)
 		if (BKE_image_is_animated(ima))
 			BKE_image_free_anim_ibufs(ima, cfra);
 }
@@ -1259,6 +1259,8 @@ char BKE_imtype_from_arg(const char *imtype_arg)
 	else if (STREQ(imtype_arg, "TIFF")) return R_IMF_IMTYPE_TIFF;
 #endif
 #ifdef WITH_OPENEXR
+	else if (STREQ(imtype_arg, "OPEN_EXR")) return R_IMF_IMTYPE_OPENEXR;
+	else if (STREQ(imtype_arg, "OPEN_EXR_MULTILAYER")) return R_IMF_IMTYPE_MULTILAYER;
 	else if (STREQ(imtype_arg, "EXR")) return R_IMF_IMTYPE_OPENEXR;
 	else if (STREQ(imtype_arg, "MULTILAYER")) return R_IMF_IMTYPE_MULTILAYER;
 #endif
@@ -2181,7 +2183,23 @@ void BKE_render_result_stamp_data(RenderResult *rr, const char *key, const char 
 	BLI_addtail(&stamp_data->custom_fields, field);
 }
 
-void BKE_stamp_data_free(struct StampData *stamp_data)
+StampData *BKE_stamp_data_copy(const StampData *stamp_data)
+{
+	if (stamp_data == NULL) {
+		return NULL;
+	}
+
+	StampData *stamp_datan = MEM_dupallocN(stamp_data);
+	BLI_duplicatelist(&stamp_datan->custom_fields, &stamp_data->custom_fields);
+
+	LISTBASE_FOREACH(StampDataCustomField *, custom_fieldn, &stamp_datan->custom_fields) {
+		custom_fieldn->value = MEM_dupallocN(custom_fieldn->value);
+	}
+
+	return stamp_datan;
+}
+
+void BKE_stamp_data_free(StampData *stamp_data)
 {
 	if (stamp_data == NULL) {
 		return;
@@ -2554,7 +2572,7 @@ Image *BKE_image_verify_viewer(Main *bmain, int type, const char *name)
 {
 	Image *ima;
 
-	for (ima = bmain->image.first; ima; ima = ima->id.next)
+	for (ima = bmain->images.first; ima; ima = ima->id.next)
 		if (ima->source == IMA_SRC_VIEWER)
 			if (ima->type == type)
 				break;
@@ -2671,7 +2689,7 @@ static void image_walk_ntree_all_users(bNodeTree *ntree, void *customdata,
 void BKE_image_walk_id_all_users(ID *id, void *customdata,
                                  void callback(Image *ima, ImageUser *iuser, void *customdata))
 {
-	switch(GS(id->name)) {
+	switch (GS(id->name)) {
 		case ID_OB:
 		{
 			Object *ob = (Object *)id;
@@ -2743,27 +2761,27 @@ void BKE_image_walk_id_all_users(ID *id, void *customdata,
 void BKE_image_walk_all_users(const Main *mainp, void *customdata,
                               void callback(Image *ima, ImageUser *iuser, void *customdata))
 {
-	for (Scene *scene = mainp->scene.first; scene; scene = scene->id.next) {
+	for (Scene *scene = mainp->scenes.first; scene; scene = scene->id.next) {
 		BKE_image_walk_id_all_users(&scene->id, customdata, callback);
 	}
 
-	for (Object *ob = mainp->object.first; ob; ob = ob->id.next) {
+	for (Object *ob = mainp->objects.first; ob; ob = ob->id.next) {
 		BKE_image_walk_id_all_users(&ob->id, customdata, callback);
 	}
 
-	for (bNodeTree *ntree = mainp->nodetree.first; ntree; ntree = ntree->id.next) {
+	for (bNodeTree *ntree = mainp->nodetrees.first; ntree; ntree = ntree->id.next) {
 		BKE_image_walk_id_all_users(&ntree->id, customdata, callback);
 	}
 
-	for (Material *ma = mainp->mat.first; ma; ma = ma->id.next) {
+	for (Material *ma = mainp->materials.first; ma; ma = ma->id.next) {
 		BKE_image_walk_id_all_users(&ma->id, customdata, callback);
 	}
 
-	for (Tex *tex = mainp->tex.first; tex; tex = tex->id.next) {
+	for (Tex *tex = mainp->textures.first; tex; tex = tex->id.next) {
 		BKE_image_walk_id_all_users(&tex->id, customdata, callback);
 	}
 
-	for (Camera *cam = mainp->camera.first; cam; cam = cam->id.next) {
+	for (Camera *cam = mainp->cameras.first; cam; cam = cam->id.next) {
 		BKE_image_walk_id_all_users(&cam->id, customdata, callback);
 	}
 
@@ -2933,7 +2951,7 @@ void BKE_image_signal(Main *bmain, Image *ima, ImageUser *iuser, int signal)
 	 * this also makes sure all scenes are accounted for. */
 	{
 		Scene *scene;
-		for (scene = bmain->scene.first; scene; scene = scene->id.next) {
+		for (scene = bmain->scenes.first; scene; scene = scene->id.next) {
 			if (scene->nodetree) {
 				nodeUpdateID(scene->nodetree, &ima->id);
 			}
@@ -3301,7 +3319,7 @@ static ImBuf *load_sequence_single(Image *ima, ImageUser *iuser, int frame, cons
 	iuser_t.view = view_id;
 	BKE_image_user_file_path(&iuser_t, ima, name);
 
-	flag = IB_rect | IB_multilayer;
+	flag = IB_rect | IB_multilayer | IB_metadata;
 	flag |= imbuf_alpha_flags_for_image(ima);
 
 	/* read ibuf */
@@ -3941,6 +3959,15 @@ static ImBuf *image_get_render_result(Image *ima, ImageUser *iuser, void **r_loc
 		ibuf->zbuf_float = NULL;
 		ibuf->flags &= ~IB_zbuffloat;
 	}
+
+	/* TODO(sergey): Make this faster by either simply referencing the stamp
+	 * or by changing both ImBug and RenderResult to use same data type to
+	 * store metadata. */
+	if (ibuf->metadata != NULL) {
+		IMB_metadata_free(ibuf->metadata);
+		ibuf->metadata = NULL;
+	}
+	BKE_imbuf_stamp_info(&rres, ibuf);
 
 	BLI_thread_unlock(LOCK_COLORMANAGE);
 

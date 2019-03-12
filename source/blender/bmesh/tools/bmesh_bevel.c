@@ -14,7 +14,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-/** \file bmesh_bevel.c
+/** \file
+ * \ingroup bmesh
  *
  * Main functions for beveling a BMesh (used by the tool and modifier)
  */
@@ -756,8 +757,11 @@ static int edges_angle_kind(EdgeHalf *e1, EdgeHalf *e2, BMVert *v)
 	v2 = BM_edge_other_vert(e2->e, v);
 	sub_v3_v3v3(dir1, v->co, v1->co);
 	sub_v3_v3v3(dir2, v->co, v2->co);
+	normalize_v3(dir1);
+	normalize_v3(dir2);
 	/* angles are in [0,pi]. need to compare cross product with normal to see if they are reflex */
 	cross_v3_v3v3(cross, dir1, dir2);
+	normalize_v3(cross);
 	if (e1->fnext)
 		no = e1->fnext->no;
 	else if (e2->fprev)

@@ -1242,6 +1242,13 @@ static void gp_stroke_newfrombuffer(tGPsdata *p)
 		}
 	}
 
+	/* post process stroke */
+	if ((p->brush->gpencil_settings->flag & GP_BRUSH_GROUP_SETTINGS) &&
+	    p->brush->gpencil_settings->flag & GP_BRUSH_TRIM_STROKE)
+	{
+		BKE_gpencil_trim_stroke(gps);
+	}
+
 	gp_stroke_added_enable(p);
 }
 
@@ -1343,9 +1350,10 @@ static void gp_free_stroke(bGPdata *gpd, bGPDframe *gpf, bGPDstroke *gps)
 	gp_update_cache(gpd);
 }
 
-/* analyze points to be removed when soft eraser is used
- * to avoid that segments gets the end points rounded. This
- * round cpas breaks the artistic effect.
+/**
+ * Analyze points to be removed when soft eraser is used
+ * to avoid that segments gets the end points rounded.
+ * The round caps breaks the artistic effect.
  */
 static void gp_stroke_soft_refine(bGPDstroke *gps, const float cull_thresh)
 {
@@ -1724,7 +1732,7 @@ static Brush *gp_get_default_eraser(Main *bmain, ToolSettings *ts)
 	Brush *brush_dft = NULL;
 	Paint *paint = &ts->gp_paint->paint;
 	Brush *brush_old = paint->brush;
-	for (Brush *brush = bmain->brush.first; brush; brush = brush->id.next) {
+	for (Brush *brush = bmain->brushes.first; brush; brush = brush->id.next) {
 		if ((brush->ob_mode == OB_MODE_PAINT_GPENCIL) &&
 		    (brush->gpencil_tool == GPAINT_TOOL_ERASE))
 		{
@@ -1766,7 +1774,7 @@ static void gp_set_default_eraser(Main *bmain, Brush *brush_dft)
 		return;
 	}
 
-	for (Brush *brush = bmain->brush.first; brush; brush = brush->id.next) {
+	for (Brush *brush = bmain->brushes.first; brush; brush = brush->id.next) {
 		if ((brush->gpencil_settings) && (brush->gpencil_tool == GPAINT_TOOL_ERASE)) {
 			if (brush == brush_dft) {
 				brush->gpencil_settings->flag |= GP_BRUSH_DEFAULT_ERASER;
@@ -2013,7 +2021,7 @@ static tGPsdata *gp_session_initpaint(bContext *C, wmOperator *op)
 	/* Create new context data */
 	p = MEM_callocN(sizeof(tGPsdata), "GPencil Drawing Data");
 
-	/* Try to initialise context data
+	/* Try to initialize context data
 	 * WARNING: This may not always succeed (e.g. using GP in an annotation-only context)
 	 */
 	if (gp_session_initdata(C, op, p) == 0) {
@@ -3676,7 +3684,7 @@ static int gpencil_draw_modal(bContext *C, wmOperator *op, const wmEvent *event)
 			/* handle drawing event */
 			/* printf("\t\tGP - add point\n"); */
 
-			if ((!(p->flags & GP_PAINTFLAG_FIRSTRUN)) && guide->use_guide) {
+			if (((p->flags & GP_PAINTFLAG_FIRSTRUN) == 0) || (guide->use_guide)) {
 				gpencil_add_missing_events(C, op, event, p);
 			}
 

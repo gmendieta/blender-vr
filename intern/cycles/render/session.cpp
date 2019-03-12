@@ -22,6 +22,7 @@
 #include "device/device.h"
 #include "render/graph.h"
 #include "render/integrator.h"
+#include "render/light.h"
 #include "render/mesh.h"
 #include "render/object.h"
 #include "render/scene.h"
@@ -657,25 +658,23 @@ DeviceRequestedFeatures Session::get_requested_device_features()
 	scene->shader_manager->get_requested_features(
 	        scene,
 	        &requested_features);
-	if(!params.background) {
-		/* Avoid too much re-compilations for viewport render. */
-		requested_features.max_nodes_group = NODE_GROUP_LEVEL_MAX;
-		requested_features.nodes_features = NODE_FEATURE_ALL;
-	}
 
 	/* This features are not being tweaked as often as shaders,
 	 * so could be done selective magic for the viewport as well.
 	 */
+	bool use_motion = scene->need_motion() == Scene::MotionType::MOTION_BLUR;
 	requested_features.use_hair = false;
 	requested_features.use_object_motion = false;
-	requested_features.use_camera_motion = scene->camera->use_motion();
+	requested_features.use_camera_motion = use_motion && scene->camera->use_motion();
 	foreach(Object *object, scene->objects) {
 		Mesh *mesh = object->mesh;
 		if(mesh->num_curves()) {
 			requested_features.use_hair = true;
 		}
-		requested_features.use_object_motion |= object->use_motion() | mesh->use_motion_blur;
-		requested_features.use_camera_motion |= mesh->use_motion_blur;
+		if (use_motion) {
+			requested_features.use_object_motion |= object->use_motion() | mesh->use_motion_blur;
+			requested_features.use_camera_motion |= mesh->use_motion_blur;
+		}
 #ifdef WITH_OPENSUBDIV
 		if(mesh->subdivision_type != Mesh::SUBDIVISION_NONE) {
 			requested_features.use_patch_evaluation = true;
@@ -684,7 +683,10 @@ DeviceRequestedFeatures Session::get_requested_device_features()
 		if(object->is_shadow_catcher) {
 			requested_features.use_shadow_tricks = true;
 		}
+		requested_features.use_true_displacement |= mesh->has_true_displacement();
 	}
+
+	requested_features.use_background_light = scene->light_manager->has_background_light(scene);
 
 	BakeManager *bake_manager = scene->bake_manager;
 	requested_features.use_baking = bake_manager->get_baking();

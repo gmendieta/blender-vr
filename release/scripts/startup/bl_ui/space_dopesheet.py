@@ -121,7 +121,7 @@ class DopesheetFilterPopoverBase:
             flow.prop(dopesheet, "show_armatures", text="Armatures")
         if bpy.data.cameras:
             flow.prop(dopesheet, "show_cameras", text="Cameras")
-        if bpy.data.grease_pencil:
+        if bpy.data.grease_pencils:
             flow.prop(dopesheet, "show_gpencil", text="Grease Pencil Objects")
         if bpy.data.lights:
             flow.prop(dopesheet, "show_lights", text="Lights")
@@ -337,6 +337,7 @@ class DOPESHEET_MT_view(Menu):
         layout.prop(st, "show_group_colors")
         layout.prop(st, "show_interpolation")
         layout.prop(st, "show_extremes")
+        layout.prop(st, "show_marker_lines")
         layout.prop(st, "use_auto_merge_keyframes")
 
         layout.prop(st, "show_seconds")
@@ -354,7 +355,7 @@ class DOPESHEET_MT_view(Menu):
 
         # Add this to show key-binding (reverse action in dope-sheet).
         layout.separator()
-        props = layout.operator("wm.context_set_enum", text="Toggle Graph Editor", icon="GRAPH")
+        props = layout.operator("wm.context_set_enum", text="Toggle Graph Editor", icon='GRAPH')
         props.data_path = "area.type"
         props.value = 'GRAPH_EDITOR'
 
@@ -574,7 +575,7 @@ class DOPESHEET_MT_delete(Menu):
         layout.operator("action.clean", text="Clean Channels").channels = True
 
 
-class DOPESHEET_MT_specials(Menu):
+class DOPESHEET_MT_context_menu(Menu):
     bl_label = "Dope Sheet Context Menu"
 
     def draw(self, context):
@@ -602,7 +603,7 @@ class DOPESHEET_MT_specials(Menu):
         layout.operator_menu_enum("action.snap", "type", text="Snap")
 
 
-class DOPESHEET_MT_channel_specials(Menu):
+class DOPESHEET_MT_channel_context_menu(Menu):
     bl_label = "Dope Sheet Channel Context Menu"
 
     def draw(self, context):
@@ -660,8 +661,8 @@ classes = (
     DOPESHEET_MT_gpencil_channel,
     DOPESHEET_MT_gpencil_frame,
     DOPESHEET_MT_delete,
-    DOPESHEET_MT_specials,
-    DOPESHEET_MT_channel_specials,
+    DOPESHEET_MT_context_menu,
+    DOPESHEET_MT_channel_context_menu,
     DOPESHEET_MT_snap_pie,
     DOPESHEET_PT_filters,
 )

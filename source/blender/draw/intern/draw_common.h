@@ -50,7 +50,7 @@ typedef struct GlobalsUboStorage {
 	float colorLibrarySelect[4];
 	float colorLibrary[4];
 	float colorTransform[4];
-	float colorLamp[4];
+	float colorLight[4];
 	float colorSpeaker[4];
 	float colorCamera[4];
 	float colorEmpty[4];
@@ -76,7 +76,7 @@ typedef struct GlobalsUboStorage {
 
 	float colorDeselect[4];
 	float colorOutline[4];
-	float colorLampNoAlpha[4];
+	float colorLightNoAlpha[4];
 
 	float colorBackground[4];
 	float colorEditMeshMiddle[4];
@@ -110,7 +110,7 @@ typedef struct GlobalsUboStorage {
 	/* NOTE! Put all color before UBO_LAST_COLOR */
 
 	/* Pack individual float at the end of the buffer to avoid alignment errors */
-	float sizeLampCenter, sizeLampCircle, sizeLampCircleShadow;
+	float sizeLightCenter, sizeLightCircle, sizeLightCircleShadow;
 	float sizeVertex, sizeEdge, sizeEdgeFix, sizeFaceDot;
 	float gridDistance, gridResolution, gridSubdivisions, gridScale;
 
@@ -148,8 +148,8 @@ struct DRWShadingGroup *shgroup_instance_bone_envelope_outline(struct DRWPass *p
 struct DRWShadingGroup *shgroup_instance_bone_envelope_solid(struct DRWPass *pass, bool transp);
 struct DRWShadingGroup *shgroup_instance_bone_shape_outline(struct DRWPass *pass, struct GPUBatch *geom, eGPUShaderConfig sh_cfg);
 struct DRWShadingGroup *shgroup_instance_bone_shape_solid(struct DRWPass *pass, struct GPUBatch *geom, bool transp, eGPUShaderConfig sh_cfg);
-struct DRWShadingGroup *shgroup_instance_bone_sphere_outline(struct DRWPass *pass);
-struct DRWShadingGroup *shgroup_instance_bone_sphere_solid(struct DRWPass *pass, bool transp);
+struct DRWShadingGroup *shgroup_instance_bone_sphere_outline(struct DRWPass *pass, eGPUShaderConfig sh_cfg);
+struct DRWShadingGroup *shgroup_instance_bone_sphere_solid(struct DRWPass *pass, bool transp, eGPUShaderConfig sh_cfg);
 struct DRWShadingGroup *shgroup_instance_bone_stick(struct DRWPass *pass, eGPUShaderConfig sh_cfg);
 struct DRWShadingGroup *shgroup_instance_bone_dof(struct DRWPass *pass, struct GPUBatch *geom);
 
@@ -175,7 +175,7 @@ typedef struct DRWArmaturePasses {
 	struct DRWPass *relationship_lines;
 } DRWArmaturePasses;
 
-void DRW_shgroup_armature_object(struct Object *ob, struct ViewLayer *view_layer, struct DRWArmaturePasses passes);
+void DRW_shgroup_armature_object(struct Object *ob, struct ViewLayer *view_layer, struct DRWArmaturePasses passes, bool transp);
 void DRW_shgroup_armature_pose(struct Object *ob, struct DRWArmaturePasses passes, bool transp);
 void DRW_shgroup_armature_edit(struct Object *ob, struct DRWArmaturePasses passes, bool transp);
 
@@ -212,6 +212,8 @@ struct DRW_Global {
 
 	struct GPUTexture *ramp;
 	struct GPUTexture *weight_ramp;
+
+	struct GPUUniformBuffer *view_ubo;
 };
 extern struct DRW_Global G_draw;
 

@@ -28,6 +28,7 @@
 #include "DNA_object_enums.h"
 
 #include "DNA_defs.h"
+#include "DNA_customdata_types.h"
 #include "DNA_listBase.h"
 #include "DNA_ID.h"
 #include "DNA_action_types.h" /* bAnimVizSettings */
@@ -122,13 +123,15 @@ typedef struct LodLevel {
  * TODO(sergey): Consider moving it to more appropriate place. */
 struct ObjectBBoneDeform;
 
+struct CustomData_MeshMasks;
+
 /* Not saved in file! */
 typedef struct Object_Runtime {
 	/**
 	 * The custom data layer mask that was last used
 	 * to calculate mesh_eval and mesh_deform_eval.
 	 */
-	uint64_t last_data_mask;
+	CustomData_MeshMasks last_data_mask;
 
 	/** Did last modifier stack generation need mapping support? */
 	char last_need_mapping;
@@ -136,7 +139,7 @@ typedef struct Object_Runtime {
 	char _pad0[3];
 
 	/** Only used for drawing the parent/child help-line. */
-	float parent_origin_eval[3];
+	float parent_display_origin[3];
 
 
 	/** Axis aligned boundbox (in localspace). */
@@ -321,8 +324,8 @@ typedef struct Object {
 	/** Current face map, note: index starts at 1. */
 	unsigned short actfmap;
 	char _pad2[2];
-	/** Object color. */
-	float col[4];
+	/** Object color (in most cases the material color is used for drawing). */
+	float color[4];
 
 	/** Softbody settings. */
 	short softflag;
@@ -336,11 +339,6 @@ typedef struct Object {
 	short shapenr;
 
 	char _pad3[2];
-
-	/** Smoothresh is phong interpolation ray_shadow correction in render. */
-	float smoothresh;
-
-	char _pad4[4];
 
 	/** Object constraints. */
 	ListBase constraints;
@@ -376,7 +374,7 @@ typedef struct Object {
 	char empty_image_depth;
 	char _pad8[2];
 
-	int select_color;
+	int select_id;
 
 	/** Contains data for levels of detail. */
 	ListBase lodlevels;
@@ -433,12 +431,11 @@ enum {
 	OB_SPEAKER    = 12,
 	OB_LIGHTPROBE = 13,
 
-/*	OB_WAVE       = 21, */
 	OB_LATTICE    = 22,
 
-/* 23 and 24 are for life and sector (old file compat.) */
 	OB_ARMATURE   = 25,
-/* Grease Pencil object used in 3D view but not used for annotation in 2D */
+
+	/** Grease Pencil object used in 3D view but not used for annotation in 2D. */
 	OB_GPENCIL  = 26,
 
 	OB_TYPE_MAX,
@@ -469,35 +466,29 @@ enum {
 enum {
 	PARTYPE       = (1 << 4) - 1,
 	PAROBJECT     = 0,
-#ifdef DNA_DEPRECATED
-	PARCURVE      = 1,  /* Deprecated. */
-#endif
-	PARKEY        = 2,  /* XXX Unused, deprecated? */
-
 	PARSKEL       = 4,
 	PARVERT1      = 5,
 	PARVERT3      = 6,
 	PARBONE       = 7,
 
-	PAR_DEPRECATED = 16,
 };
 
 /* (short) transflag */
 enum {
-	OB_TRANSFLAG_DEPRECATED_0 = 1 << 0,
-	OB_TRANSFLAG_DEPRECATED_1 = 1 << 1,
+	OB_TRANSFLAG_DEPRECATED_0 = 1 << 0,  /* cleared */
+	OB_TRANSFLAG_DEPRECATED_1 = 1 << 1,  /* cleared */
 	OB_NEG_SCALE        = 1 << 2,
-	OB_TRANSFLAG_DEPRECATED_3 = 1 << 3,
+	OB_TRANSFLAG_DEPRECATED_3 = 1 << 3,  /* cleared */
 	OB_DUPLIVERTS       = 1 << 4,
 	OB_DUPLIROT         = 1 << 5,
-	OB_TRANSFLAG_DEPRECATED_4 = 1 << 6,
+	OB_TRANSFLAG_DEPRECATED_6 = 1 << 6,  /* cleared */
 	/* runtime, calculate derivedmesh for dupli before it's used */
 	OB_DUPLICALCDERIVED = 1 << 7,
 	OB_DUPLICOLLECTION  = 1 << 8,
 	OB_DUPLIFACES       = 1 << 9,
 	OB_DUPLIFACES_SCALE = 1 << 10,
 	OB_DUPLIPARTS       = 1 << 11,
-	OB_TRANSLFAG_DEPRECATED_2 = 1 << 12,
+	OB_TRANSFLAG_DEPRECATED_12 = 1 << 12,  /* cleared */
 	/* runtime constraints disable */
 	OB_NO_CONSTRAINTS   = 1 << 13,
 	/* hack to work around particle issue */
@@ -628,7 +619,8 @@ enum {
 
 /* ob->nlaflag */
 enum {
-	/* WARNING: flags (1 << 0) and (1 << 1) were from old animsys */
+	OB_ADS_DEPRECATED_1    = 1 << 0,  /* cleared */
+	OB_ADS_DEPRECATED_2    = 1 << 1,  /* cleared */
 	/* object-channel expanded status */
 	OB_ADS_COLLAPSED    = 1 << 10,
 	/* object's ipo-block */

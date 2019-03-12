@@ -193,19 +193,12 @@ static uiBlock *ui_block_func_POPUP(bContext *C, uiPopupBlockHandle *handle, voi
 			minwidth = UI_MENU_WIDTH_MIN;
 		}
 
-		/* settings (typically rna-enum-popups) show above the button,
-		 * menu's like file-menu, show below */
 		if (pup->block->direction != 0) {
 			/* allow overriding the direction from menu_func */
 			direction = pup->block->direction;
 		}
-		else if ((pup->but->type == UI_BTYPE_PULLDOWN) ||
-		         (UI_but_menutype_get(pup->but) != NULL))
-		{
-			direction = UI_DIR_DOWN;
-		}
 		else {
-			direction = UI_DIR_UP;
+			direction = UI_DIR_DOWN;
 		}
 	}
 	else {

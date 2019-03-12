@@ -51,13 +51,17 @@
 
 /* Match RNA names where possible, keep sorted. */
 
+DNA_STRUCT_RENAME(Lamp, Light)
 DNA_STRUCT_RENAME(SpaceButs, SpaceProperties)
 DNA_STRUCT_RENAME(SpaceIpo, SpaceGraph)
 DNA_STRUCT_RENAME(SpaceOops, SpaceOutliner)
+DNA_STRUCT_RENAME_ELEM(BPoint, alfa, tilt)
+DNA_STRUCT_RENAME_ELEM(BezTriple, alfa, tilt)
 DNA_STRUCT_RENAME_ELEM(Camera, YF_dofdist, dof_distance)
 DNA_STRUCT_RENAME_ELEM(Camera, clipend, clip_end)
 DNA_STRUCT_RENAME_ELEM(Camera, clipsta, clip_start)
 DNA_STRUCT_RENAME_ELEM(Collection, dupli_ofs, instance_offset)
+DNA_STRUCT_RENAME_ELEM(Object, col, color)
 DNA_STRUCT_RENAME_ELEM(Object, dup_group, instance_collection)
 DNA_STRUCT_RENAME_ELEM(Object, dupfacesca, instance_faces_scale)
 DNA_STRUCT_RENAME_ELEM(Object, size, scale)
@@ -85,5 +89,5 @@ DNA_STRUCT_RENAME_ELEM(bTheme, tuserpref, space_preferences)
 DNA_STRUCT_RENAME_ELEM(bTheme, tv3d, space_view3d)
 
 #if 0
-DNA_STRUCT_RENAME(Lamp, Light)
+DNA_STRUCT_RENAME(Light, Light)
 #endif

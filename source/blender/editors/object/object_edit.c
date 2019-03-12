@@ -306,12 +306,6 @@ void ED_collection_hide_menu_draw(const bContext *C, uiLayout *layout)
 			continue;
 		}
 
-		if ((view_layer->runtime_flag & VIEW_LAYER_HAS_HIDE) &&
-		    !(lc->runtime_flag & LAYER_COLLECTION_HAS_VISIBLE_OBJECTS))
-		{
-			uiLayoutSetActive(row, false);
-		}
-
 		int icon = ICON_NONE;
 		if (BKE_layer_collection_has_selected_objects(view_layer, lc)) {
 			icon = ICON_LAYER_ACTIVE;
@@ -381,7 +375,7 @@ static bool mesh_needs_keyindex(Main *bmain, const Mesh *me)
 		return false;  /* will be added */
 	}
 
-	for (const Object *ob = bmain->object.first; ob; ob = ob->id.next) {
+	for (const Object *ob = bmain->objects.first; ob; ob = ob->id.next) {
 		if ((ob->parent) && (ob->parent->data == me) && ELEM(ob->partype, PARVERT1, PARVERT3)) {
 			return true;
 		}
