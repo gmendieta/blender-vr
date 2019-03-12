@@ -68,14 +68,10 @@ void VR_UIManager::computeNavMatrix()
 			mul_m4_m4m4(deltaMatrix, m_navStartMatrix, navInvMatrix);
 			// Store current navigation for next iteration
 			copy_m4_m4(m_navStartMatrix, navMatrix);
-			// Convert delta matrix into navigation space
-			mul_m4_m4_pre(deltaMatrix, m_navMatrix);
-			mul_m4_m4_post(deltaMatrix, m_navInvMatrix);
 			// Apply delta to navigation space
-			mul_m4_m4_pre(m_navMatrix, deltaMatrix);
+			mul_m4_m4_post(m_navMatrix, deltaMatrix);
 			// Store current navigation inverse for next iteration
 			invert_m4_m4(m_navInvMatrix, m_navMatrix);
-
 
 			////// Fly ///////
 			float right = m_currentState[VR_RIGHT].mThumbstick[0] * VR_FLY_MAX_SPEED;
