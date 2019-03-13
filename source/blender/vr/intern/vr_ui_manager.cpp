@@ -85,6 +85,16 @@ void VR_UIManager::computeNavMatrix()
 		mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_RIGHT], navInvMatrix);
 		// Apply delta to navigation space
 		mul_m4_m4_post(m_navMatrix, deltaMatrix);
+
+		// Copy already calculated matrix
+		copy_m4_m4(navMatrix, m_touchMatrices[VR_LEFT]);
+		// Invert the current controller matrix in order to achieve inverse transformation
+		invert_m4_m4(navInvMatrix, navMatrix);
+		// Get delta
+		mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_LEFT], navInvMatrix);
+		// Apply delta to navigation space
+		mul_m4_m4_post(m_navMatrix, deltaMatrix);
+		
 		// Store current navigation inverse for next iteration
 		invert_m4_m4(m_navInvMatrix, m_navMatrix);
 
