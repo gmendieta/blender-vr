@@ -24,7 +24,9 @@ private:
 	bool m_isNavigating{ false };							// Flag to control whether the user is navigating or not
 	float m_viewMatrix[4][4];								// Current Head matrix
 	float m_viewInvMatrix[4][4];							// Current Head inverse matrix
-	float m_navStartMatrix[4][4];							// Start navigation matrix
+	float m_touchPrevMatrices[VR_MAX_SIDES][4][4];			// Touch controller start matrices
+	float m_touchMatrices[VR_MAX_SIDES][4][4];				// Touch controller matrices
+	float m_navScale;										// Navigation scale
 	float m_navMatrix[4][4];								// Accumulated navigation matrix
 	float m_navInvMatrix[4][4];								// Accumulated inverse matrix
 	float m_flyMaxSpeed;
