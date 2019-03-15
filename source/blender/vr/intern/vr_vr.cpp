@@ -192,7 +192,6 @@ void vr_view_matrix_compute(uint view, float viewmat[4][4])
 
 	float position[3];
 	float rotation[4];
-	float head_matrix[4][4];
 	float eye_matrix[4][4];
 	float nav_matrix[4][4];
 	float view_matrix[4][4];
@@ -201,10 +200,6 @@ void vr_view_matrix_compute(uint view, float viewmat[4][4])
 	vr_oculus_blender_matrix_build(rotation, position, eye_matrix);
 	vrUiManager->getNavMatrix(nav_matrix);
 	mul_m4_m4m4(view_matrix, nav_matrix, eye_matrix);
-
-	// Update Ui Manager View
-	vrHmd->getHmdTransform(position, rotation);
-	vr_oculus_blender_matrix_build(rotation, position, head_matrix);
 
 	// Copied from obmat_to_viewmat
 	normalize_m4_m4(viewmat, view_matrix);
