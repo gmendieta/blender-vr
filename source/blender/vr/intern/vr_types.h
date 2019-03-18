@@ -8,7 +8,7 @@ typedef enum _VR_Side
 	VR_LEFT,
 	VR_RIGHT,
 	VR_MAX_SIDES,
-};
+} VR_Side;
 
 typedef enum _VR_TrackingOrigin
 {

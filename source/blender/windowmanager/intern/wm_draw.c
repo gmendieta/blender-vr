@@ -571,7 +571,9 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
 					wm_draw_region_stereo_set(bmain, sa, ar, view);
 					
 					vr_draw_region_bind(ar, view);
-					ED_region_do_draw(C, ar);
+					// Draw before Blender is done from draw_manager.c
+					ED_region_do_draw(C, ar);			// Draw Blender
+					vr_region_do_post_draw(view);		// Draw after Blender
 					vr_draw_region_unbind(ar, view);
 				}
 

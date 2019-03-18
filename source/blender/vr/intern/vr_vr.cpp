@@ -190,16 +190,13 @@ void vr_view_matrix_compute(uint view, float viewmat[4][4])
 {
 	BLI_assert(vr.initialized);
 
-	float position[3];
-	float rotation[4];
-	float eye_matrix[4][4];
 	float nav_matrix[4][4];
 	float view_matrix[4][4];
 
-	vrHmd->getEyeTransform(view, position, rotation);
-	vr_oculus_blender_matrix_build(rotation, position, eye_matrix);
-	vrUiManager->getNavMatrix(nav_matrix);
-	mul_m4_m4m4(view_matrix, nav_matrix, eye_matrix);
+	//vrHmd->getEyeTransform(view, position, rotation);
+	//vr_oculus_blender_matrix_build(rotation, position, eye_matrix);
+	vrUiManager->getNavMatrix(nav_matrix, true);					// Get scaled navigation
+	mul_m4_m4m4(view_matrix, nav_matrix, vr.eye_matrix[view]);		// Use pre-computed eye matrix
 
 	// Copied from obmat_to_viewmat
 	normalize_m4_m4(viewmat, view_matrix);
@@ -277,6 +274,15 @@ void vr_camera_params_compute_viewplane(const View3D *v3d, CameraParams *params,
 	params->viewplane = viewplane;
 }
 
+void vr_set_view_matrix(uint view, float matrix[4][4])
+{
+	vrUiManager->setViewMatrix(view, matrix);
+}
+
+void vr_set_projection_matrix(uint view, float matrix[4][4])
+{
+	vrUiManager->setProjectionMatrix(view, matrix);
+}
 
 int vr_begin_frame()
 {
@@ -289,15 +295,19 @@ int vr_begin_frame()
 	float position[3];
 	float rotation[4];
 	float head_matrix[4][4];
-	float nav_matrix[4][4];
-	float view_matrix[4][4];
+
+	// Precompute eye matrices
+	for (int s = 0; s < VR_MAX_SIDES; ++s) {
+		vrHmd->getEyeTransform(s, position, rotation);
+		vr_oculus_blender_matrix_build(rotation, position, vr.eye_matrix[s]);
+		// Set Ui eye matrix
+		vrUiManager->setEyeMatrix(s, vr.eye_matrix[s]);
+	}
 
 	// Set Ui view matrix
 	vrHmd->getHmdTransform(position, rotation);
 	vr_oculus_blender_matrix_build(rotation, position, head_matrix);
-	vrUiManager->getNavMatrix(nav_matrix);
-	mul_m4_m4m4(view_matrix, nav_matrix, head_matrix);
-	vrUiManager->setViewMatrix(view_matrix);
+	vrUiManager->setHeadMatrix(head_matrix);
 
 	// Update Input
 	vr_process_input();
@@ -366,6 +376,16 @@ void vr_process_input()
 	vrUiManager->setControllerState(VR_RIGHT, rControllerState);
 
 	vrUiManager->processUserInput();
+}
+
+void vr_region_do_pre_draw(uint view)
+{
+	vrUiManager->doPreDraw(view);
+}
+
+void vr_region_do_post_draw(uint view)
+{
+	vrUiManager->doPostDraw(view);
 }
 
 int vr_get_eye_texture_size(int *width, int *height)

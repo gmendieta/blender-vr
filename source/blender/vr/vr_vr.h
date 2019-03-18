@@ -25,6 +25,8 @@ typedef struct _vrWindow {
 	struct ARegion *ar_vr;						// VR ARegion	
 	int texture_width;							// Recommended texture width
 	int texture_height;							// Recommented texture height
+	// TODO Import vr_types.h??
+	float eye_matrix[2][4][4];					// Eye matrices
 	vrFov eye_fov[2];							// Half tangents
 	struct GPUViewport *viewport[2];
 } vrWindow;
@@ -74,11 +76,23 @@ void vr_view_matrix_compute(uint view, float matrix[4][4]);
 /// Compute viewplane. Blender will compute projection from that. There some tools like GP that uses this viewplane to work
 void vr_camera_params_compute_viewplane(const struct View3D *v3d, struct CameraParams *params, int winx, int winy, float xasp, float yasp);
 
+/// Set Blender built view matrix
+void vr_set_view_matrix(uint view, float matrix[4][4]);
+
+/// Set Blender built projection matrix
+void vr_set_projection_matrix(uint view, float matrix[4][4]);
+
 /// Begin a frame. Update internal tracking and device inputs
 int vr_begin_frame();
 
 /// End a frame. Mainly blit the textures that has been drawing in GPUViewport
 int vr_end_frame();
+
+/// Called just before Blender drawing
+void vr_region_do_pre_draw(uint view);
+
+/// Called just after BLender drawing
+void vr_region_do_post_draw(uint view);
 
 /// Process the User input using VR devices
 void vr_process_input();
