@@ -10,6 +10,7 @@ extern "C"
 #include "BLI_math_vector.h"
 #include "GPU_batch.h"
 #include "GPU_shader.h"
+#include "GPU_state.h"
 #include "draw_cache.h"
 
 static const float VR_FLY_MAX_SPEED = 0.5f;
@@ -20,8 +21,9 @@ VR_UIManager::VR_UIManager()
 	unit_m4(m_headMatrix);
 	unit_m4(m_headInvMatrix);
 	unit_m4(m_navMatrix);
-	unit_m4(m_navScaledMatrix);
 	unit_m4(m_navInvMatrix);
+	unit_m4(m_navScaledMatrix);
+	unit_m4(m_navScaledInvMatrix);
 
 	for (int s = 0; s < VR_MAX_SIDES; ++s) {
 		unit_m4(m_touchPrevMatrices[s]);
@@ -57,12 +59,12 @@ void VR_UIManager::setEyeMatrix(unsigned int side, const float matrix[4][4])
 
 void VR_UIManager::setViewMatrix(unsigned int side, const float matrix[4][4])
 {
-	copy_m4_m4(m_viewMatrix[side], matrix);
+	copy_m4_m4(m_bViewMatrix[side], matrix);
 }
 
 void VR_UIManager::setProjectionMatrix(unsigned int side, const float matrix[4][4])
 {
-	copy_m4_m4(m_projectionMatrix[side], matrix);
+	copy_m4_m4(m_bProjectionMatrix[side], matrix);
 }
 
 void VR_UIManager::processUserInput()
@@ -152,8 +154,9 @@ void VR_UIManager::computeNavMatrix()
 			*/
 		}
 
-		// Store current navigation inverse for next iteration
+		// Store current navigation inverse for UI
 		invert_m4_m4(m_navInvMatrix, m_navMatrix);
+		invert_m4_m4(m_navScaledInvMatrix, m_navScaledMatrix);
 
 		// Store current navigation for next iteration
 		copy_m4_m4(m_touchPrevMatrices[VR_RIGHT], m_touchMatrices[VR_RIGHT]);
@@ -174,25 +177,34 @@ void VR_UIManager::getNavMatrix(float matrix[4][4], bool scaled)
 
 void VR_UIManager::doPreDraw(unsigned int side)
 {
-	;
+	// All matrices have been already updated. Cache them
+	mul_m4_m4m4(m_viewProjectionMatrix, m_bProjectionMatrix[side], m_bViewMatrix[side]);
 }
 
 void VR_UIManager::doPostDraw(unsigned int side)
 {
+	GPU_depth_test(true);
+	drawTouchControllers();
+	drawUserInterface();
+	GPU_depth_test(false);
+}
 
-	// All matrices have been already updated
-	// We want unscaled view matrix
-	float viewMatrix[4][4];
+void VR_UIManager::drawTouchControllers()
+{
 	float modelViewProj[4][4];
 	float modelScale[4][4];
 	unit_m4(modelViewProj);
 
-	// Build no scaled view matrix
-	copy_m4_m4(viewMatrix, m_eyeMatrix[side]);
-	// Copied from obmat_to_viewmat
-	normalize_m4(viewMatrix);
-	invert_m4(viewMatrix);
 	scale_m4_fl(modelScale, 0.01f);
+
+	float touchColor[2][4] = {
+		{ 0.0f, 0.0f, 0.7f, 1.0f },
+		{ 0.7f, 0.0f, 0.0f, 1.0f },
+	};
+
+	GPUBatch *touchBatch = DRW_cache_sphere_get();
+	GPUShader *touchShader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
+	GPU_batch_program_set_shader(touchBatch, touchShader);
 
 	for (int touchSide = 0; touchSide < VR_MAX_SIDES; ++touchSide) {
 		// Build ModelViewProjection matrix
@@ -200,17 +212,22 @@ void VR_UIManager::doPostDraw(unsigned int side)
 		mul_m4_m4_pre(modelViewProj, modelScale);
 		// Copy Translation because of scaling
 		copy_v3_v3(modelViewProj[3], m_touchMatrices[touchSide][3]);
-		mul_m4_m4_pre(modelViewProj, viewMatrix);
-		mul_m4_m4_pre(modelViewProj, m_projectionMatrix[side]);
+		// Apply navigation to model to make it appear in Eye space
+		mul_m4_m4_pre(modelViewProj, m_navScaledMatrix);
+		mul_m4_m4_pre(modelViewProj, m_viewProjectionMatrix);
 
-		GPUBatch *batch = DRW_cache_sphere_get();
-		GPUShader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_FLAT_COLOR);
-		GPU_batch_program_set_shader(batch, shader);
-		GPU_batch_uniform_mat4(batch, "ModelViewProjectionMatrix", modelViewProj);
-		GPU_batch_program_use_begin(batch);
-		GPU_batch_draw_range_ex(batch, 0, 0, false);
-		GPU_batch_program_use_end(batch);
+		float *c = touchColor[touchSide];
+		GPU_batch_uniform_4f(touchBatch, "color", c[0], c[1], c[2], c[3]);
+		GPU_batch_uniform_mat4(touchBatch, "ModelViewProjectionMatrix", modelViewProj);
+		GPU_batch_program_use_begin(touchBatch);
+		GPU_batch_draw_range_ex(touchBatch, 0, 0, false);
+		GPU_batch_program_use_end(touchBatch);
 	}
+}
+
+void VR_UIManager::drawUserInterface()
+{
+	;
 }
 
 }

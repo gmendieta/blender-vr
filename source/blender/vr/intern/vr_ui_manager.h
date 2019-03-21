@@ -38,8 +38,11 @@ public:
 	void getNavMatrix(float matrix[4][4], bool scaled);
 
 private:
-	float m_projectionMatrix[VR_MAX_SIDES][4][4];					// Blender built Projection matrix
-	float m_viewMatrix[VR_MAX_SIDES][4][4];					// Blender built View matrix
+	float m_bProjectionMatrix[VR_MAX_SIDES][4][4];			// Blender built Projection matrix
+	float m_bViewMatrix[VR_MAX_SIDES][4][4];				// Blender built View matrix
+
+	float m_viewMatrix[4][4];								// Cache view matrix
+	float m_viewProjectionMatrix[4][4];						// Cache view projection matrix
 
 	bool m_isNavigating{ false };							// Flag to control whether the user is navigating or not
 	float m_eyeMatrix[VR_MAX_SIDES][4][4];					// Eye matrices
@@ -51,15 +54,22 @@ private:
 	float m_touchMatrices[VR_MAX_SIDES][4][4];				// Touch controller matrices
 	float m_navScale;										// Navigation scale
 	float m_navMatrix[4][4];								// Accumulated navigation matrix
-	float m_navScaledMatrix[4][4];							// Accumulated navigation matrix scaled
 	float m_navInvMatrix[4][4];								// Accumulated inverse matrix
+	float m_navScaledMatrix[4][4];							// Accumulated navigation matrix scaled
+	float m_navScaledInvMatrix[4][4];						// Accumulated navigation inverse matrix scaled
 	float m_flyMaxSpeed;
 
 	VR_ControllerState m_currentState[VR_MAX_SIDES];		// Current state of controllers
 	VR_ControllerState m_previousState[VR_MAX_SIDES];		// Previous state of controllers
 
+	/// Compute navigation matrix
 	void computeNavMatrix();
-	
+
+	/// Draw Touch controllers, using cached m_viewProjectionMatrix
+	void drawTouchControllers();
+
+	/// Draw graphical user interface, using cached m_viewProjectionMatrix
+	void drawUserInterface();
 
 
 };

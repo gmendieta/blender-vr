@@ -1529,7 +1529,7 @@ void DRW_draw_render_loop_ex(
 #ifdef WITH_VR
 	if (rv3d->rflag & RV3D_VR) {
 		uint view = v3d->multiview_eye;
-		vr_set_view_matrix(view, rv3d->viewinv);
+		vr_set_view_matrix(view, rv3d->viewmat);
 		vr_set_projection_matrix(view, rv3d->winmat);
 		// Draw before Blender
 		vr_region_do_pre_draw(view);
