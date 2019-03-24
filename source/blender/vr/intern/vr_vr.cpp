@@ -72,6 +72,9 @@ int vr_initialize()
 	vr.eye_fov[VR_RIGHT].left_tan = right_fov[2];
 	vr.eye_fov[VR_RIGHT].right_tan = right_fov[3];
 
+	vr.win_vr = NULL;
+	vr.ar_vr = NULL;
+
 	vr.initialized = 1;
 	return 1;
 }
@@ -91,8 +94,13 @@ wmWindow* vr_window_get()
 
 void vr_window_set(struct wmWindow *win)
 {
+	if (!vr.initialized) {
+		return;
+	}
+
 	vr.win_vr = win;
 	vr.ar_vr = NULL;
+	vrUiManager->setBlenderWindow(vr.win_vr);
 }
 
 ARegion* vr_region_get()
@@ -288,6 +296,9 @@ int vr_begin_frame()
 {
 	BLI_assert(vr.initialized);
 
+
+	vrUiManager->updateUiTextures();
+
 	// Update all VR states and tracking
 	vrHmd->beginFrame();
 	
@@ -359,6 +370,9 @@ int vr_end_frame()
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_fbo);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_fbo);
+
+	//vrUiManager->updateUiTextures();
+
 	return 1;
 }
 
@@ -411,6 +425,7 @@ int vr_shutdown()
 
 	vr.win_vr = NULL;
 	vr.ar_vr = NULL;
+	vr.initialized = 0;
 	
 	return 1;
 }

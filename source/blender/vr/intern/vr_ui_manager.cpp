@@ -3,15 +3,24 @@
 
 #include <string.h>	// memcpy
 
+#include "GPU_context.h"
+
 extern "C"
 {
 
+#include "vr_draw_cache.h"
+#include "draw_cache.h"
 #include "BLI_math_matrix.h"
 #include "BLI_math_vector.h"
+
+#include "DNA_windowmanager_types.h"
+#include "MEM_guardedalloc.h"
+#include "GPU_framebuffer.h"
+#include "GPU_texture.h"
 #include "GPU_batch.h"
 #include "GPU_shader.h"
 #include "GPU_state.h"
-#include "draw_cache.h"
+
 
 static const float VR_FLY_MAX_SPEED = 0.5f;
 
@@ -31,11 +40,19 @@ VR_UIManager::VR_UIManager()
 		unit_m4(m_eyeMatrix[s]);
 	}
 	m_flyMaxSpeed = VR_FLY_MAX_SPEED;
+
+	m_menuOffscreen = NULL;
+	m_bWindow = NULL;
 }
 
 VR_UIManager::~VR_UIManager()
 {
-	;
+	DRW_VR_shape_cache_free();
+
+	if (m_menuOffscreen) {
+		GPU_offscreen_free(m_menuOffscreen);
+		m_menuOffscreen = NULL;
+	}
 }
 
 void VR_UIManager::setControllerState(unsigned int side, const VR_ControllerState & controllerState)
@@ -175,6 +192,45 @@ void VR_UIManager::getNavMatrix(float matrix[4][4], bool scaled)
 	return;
 }
 
+float VR_UIManager::getNavScale()
+{
+	return len_v3(m_navScaledMatrix[0]);
+}
+
+void VR_UIManager::setBlenderWindow(struct wmWindow *bWindow)
+{
+	m_bWindow = bWindow;
+}
+
+void VR_UIManager::updateUiTextures()
+{
+	uint bWinWidth = m_bWindow->sizex;
+	uint bWinHeight = m_bWindow->sizey;
+
+	// The size of the window could change. Ensure Offscreen is the same size
+	ensureOffscreenSize(&m_menuOffscreen, bWinWidth, bWinHeight);
+	
+	// Store previous bind FBO
+	GLint draw_fbo = 0;
+	GLint read_fbo = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
+
+	GPUFrameBuffer *fbo;
+	GPUTexture *colorTex;
+	GPUTexture *depthTex;
+	GPU_offscreen_viewport_data_get(m_menuOffscreen, &fbo, &colorTex, &depthTex);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	glReadBuffer(GL_BACK);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GPU_framebuffer_bindcode(fbo));
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glBlitFramebuffer(0, 0, bWinWidth, bWinHeight, 0, 0, bWinWidth, bWinHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_fbo);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_fbo);
+}
+
 void VR_UIManager::doPreDraw(unsigned int side)
 {
 	// All matrices have been already updated. Cache them
@@ -202,6 +258,7 @@ void VR_UIManager::drawTouchControllers()
 		{ 0.7f, 0.0f, 0.0f, 1.0f },
 	};
 
+	// TODO Change for a model or custom GPUBatch
 	GPUBatch *touchBatch = DRW_cache_sphere_get();
 	GPUShader *touchShader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
 	GPU_batch_program_set_shader(touchBatch, touchShader);
@@ -227,7 +284,66 @@ void VR_UIManager::drawTouchControllers()
 
 void VR_UIManager::drawUserInterface()
 {
-	;
+	float modelViewProj[4][4];
+	float menuScale[4][4];
+	float menuMatrix[4][4];
+	unit_m4(modelViewProj);
+	unit_m4(menuScale);
+	unit_m4(menuMatrix);
+
+	// Get Offscreen aspect ratio to scale 3d plane
+	int ofsWidth = GPU_offscreen_height(m_menuOffscreen);
+	int ofsHeight = GPU_offscreen_width(m_menuOffscreen);
+	float aspect = (float)ofsWidth / (float)ofsHeight;
+
+	menuScale[0][0] = 1.0f;
+	menuScale[1][1] = 1.0f;
+	menuScale[2][2] = aspect;
+	menuScale[3][3] = 1.0;
+
+	translate_m4(menuMatrix, 0.0f, 2.0f, 1.0f);
+	
+	GPUBatch *menuBatch = DRW_VR_cache_plane3d_get();
+	GPUShader *menuShader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_IMAGE_MODULATE_ALPHA);
+	GPU_batch_program_set_shader(menuBatch, menuShader);
+
+	// Build ModelViewProjection matrix
+	copy_m4_m4(modelViewProj, menuMatrix);
+	mul_m4_m4_pre(modelViewProj, menuScale);
+	
+	// Apply navigation to model to make it appear in Eye space
+	mul_m4_m4_pre(modelViewProj, m_viewProjectionMatrix);
+	
+	GPUFrameBuffer *fbo;
+	GPUTexture *colorTex;
+	GPUTexture *depthTex;
+
+	GPU_offscreen_viewport_data_get(m_menuOffscreen, &fbo, &colorTex, &depthTex);
+
+	GPU_texture_bind(colorTex, 0);
+	GPU_batch_uniform_1i(menuBatch, "image", 0);
+	GPU_batch_uniform_1f(menuBatch, "alpha", 1.0f);
+	GPU_batch_uniform_mat4(menuBatch, "ModelViewProjectionMatrix", modelViewProj);
+
+	GPU_batch_program_use_begin(menuBatch);
+	GPU_batch_draw_range_ex(menuBatch, 0, 0, false);
+	GPU_batch_program_use_end(menuBatch);
+}
+
+void VR_UIManager::ensureOffscreenSize(GPUOffScreen **ofs, unsigned int width, unsigned int height)
+{
+	bool ok = false;
+	if (*ofs) {
+		int ofsWidth = GPU_offscreen_width(*ofs);
+		int ofsHeight = GPU_offscreen_height(*ofs);
+		ok = ofsWidth == width && ofsHeight == height;
+	}
+
+	if (!ok) {
+		if (*ofs)
+			GPU_offscreen_free(*ofs);
+		*ofs = GPU_offscreen_create(width, height, 0, false, false, NULL);
+	}
 }
 
 }

@@ -4,6 +4,14 @@
 
 #include "vr_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct wmWindow;
+struct GPUBatch;
+struct GPUOffScreen;
+
 class VR_UIManager
 {
 public:
@@ -37,7 +45,20 @@ public:
 	/// Get the current navigation matrix
 	void getNavMatrix(float matrix[4][4], bool scaled);
 
+	/// Get the current navigation scale
+	float getNavScale();
+
+	/// Store Blender window
+	void setBlenderWindow(struct wmWindow *bWindow);
+
+	/// Update internal textures
+	void updateUiTextures();
+
 private:
+
+	GPUOffScreen *m_menuOffscreen;
+	const wmWindow *m_bWindow;
+
 	float m_bProjectionMatrix[VR_MAX_SIDES][4][4];			// Blender built Projection matrix
 	float m_bViewMatrix[VR_MAX_SIDES][4][4];				// Blender built View matrix
 
@@ -71,8 +92,13 @@ private:
 	/// Draw graphical user interface, using cached m_viewProjectionMatrix
 	void drawUserInterface();
 
-
+	/// Check Offscreen size and recreate if necessary
+	void ensureOffscreenSize(GPUOffScreen **ofs, unsigned int width, unsigned int height);
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __VR_UI_MANAGER_H__
 

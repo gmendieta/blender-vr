@@ -537,10 +537,8 @@ void wm_window_close(bContext *C, wmWindowManager *wm, wmWindow *win)
 
 #ifdef WITH_VR
 	wmWindow *win_vr = vr_window_get();
-	if (win_vr == win)
-	{
+	if (win_vr == win) {
 		vr_shutdown();
-		vr_window_set(NULL);
 	}
 #endif // WITH_VR
 
