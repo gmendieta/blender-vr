@@ -30,11 +30,12 @@ extern "C"
 #include "vr_vr.h"
 #include "vr_utils.h"
 #include "vr_types.h"
+#include "vr_draw_cache.h"
 
 // vr singleton
 static vrWindow vr;
 static VR_Oculus *vrHmd { nullptr };
-static VR_UIManager *vrUiManager{ nullptr };
+static VR_UI_Manager *vrUiManager{ nullptr };
 
 vrWindow* vr_get_instance()
 {
@@ -48,7 +49,7 @@ int vr_initialize()
 	//wglMakeCurrent(vr.device, vr.context);
 
 	vrHmd = new VR_Oculus();
-	vrUiManager = new VR_UIManager();
+	vrUiManager = new VR_UI_Manager();
 	int ok = vrHmd->initialize(nullptr, nullptr);
 	if (ok < 0) {
 		vr.initialized = 0;
@@ -413,6 +414,8 @@ int vr_get_eye_texture_size(int *width, int *height)
 
 int vr_shutdown()
 {
+	DRW_VR_shape_cache_free();
+
 	if (vrHmd) {
 		vrHmd->unintialize();
 		delete vrHmd;

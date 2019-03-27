@@ -1,12 +1,6 @@
 
-
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "vr_draw_cache.h"
+
 #include "MEM_guardedalloc.h"
 #include "GPU_batch.h"
 
@@ -68,6 +62,20 @@ GPUBatch* DRW_VR_cache_plane3d_get()
 	return SHC.drw_vr_plane3d;
 }
 
-#ifdef __cplusplus
+GPUBatch * DRW_VR_segment_get(float p1[3], float p2[3])
+{
+	/* Position Only 3D format */
+	static GPUVertFormat format = { 0 };
+	static struct { uint pos; } attr_id;
+	if (format.attr_len == 0) {
+		attr_id.pos = GPU_vertformat_attr_add(&format, "pos", GPU_COMP_F32, 3, GPU_FETCH_FLOAT);
+	}
+
+	GPUVertBuf *vbo = GPU_vertbuf_create_with_format(&format);
+	GPU_vertbuf_data_alloc(vbo, 2);
+
+	GPU_vertbuf_attr_set(vbo, attr_id.pos, 0, p1);
+	GPU_vertbuf_attr_set(vbo, attr_id.pos, 1, p2);
+
+	return GPU_batch_create_ex(GPU_PRIM_LINES, vbo, NULL, GPU_BATCH_OWNS_VBO);
 }
-#endif

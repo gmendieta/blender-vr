@@ -61,6 +61,7 @@ set(SRC
     intern/vr_vr.cpp
     intern/vr_math.cpp
     intern/vr_draw_cache.c
+    intern/vr_ui_window.cpp
     intern/vr_ui_manager.cpp
     intern/vr_oculus.cpp
 
@@ -72,6 +73,7 @@ set(SRC
     intern/vr_math.h
     intern/vr_utils.h
     intern/vr_draw_cache.h
+    intern/vr_ui_window.h
     intern/vr_ui_manager.h
     intern/vr_oculus.h
 )

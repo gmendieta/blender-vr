@@ -3,20 +3,20 @@
 #define __VR_UI_MANAGER_H__
 
 #include "vr_types.h"
+#include "vr_ui_window.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct wmWindow;
-struct GPUBatch;
 struct GPUOffScreen;
 
-class VR_UIManager
+class VR_UI_Manager
 {
 public:
-	VR_UIManager();
-	~VR_UIManager();
+	VR_UI_Manager();
+	~VR_UI_Manager();
 
 	/// Set the current state of a controller
 	void setControllerState(unsigned int side, const VR_ControllerState &controllerState);
@@ -56,8 +56,9 @@ public:
 
 private:
 
-	GPUOffScreen *m_menuOffscreen;
 	const wmWindow *m_bWindow;
+	VR_UI_Window *m_mainMenu;
+
 
 	float m_bProjectionMatrix[VR_MAX_SIDES][4][4];			// Blender built Projection matrix
 	float m_bViewMatrix[VR_MAX_SIDES][4][4];				// Blender built View matrix
@@ -86,14 +87,14 @@ private:
 	/// Compute navigation matrix
 	void computeNavMatrix();
 
-	/// Draw Touch controllers, using cached m_viewProjectionMatrix
+	/// Draw Touch controllers in Navigation Space
 	void drawTouchControllers();
 
-	/// Draw graphical user interface, using cached m_viewProjectionMatrix
-	void drawUserInterface();
+	/// Draw a Ray in Navigation Space
+	void drawRay(float start[3], float dir[3], float length, float color[4]);
 
-	/// Check Offscreen size and recreate if necessary
-	void ensureOffscreenSize(GPUOffScreen **ofs, unsigned int width, unsigned int height);
+	/// Draw graphical user interface
+	void drawUserInterface();
 };
 
 #ifdef __cplusplus
