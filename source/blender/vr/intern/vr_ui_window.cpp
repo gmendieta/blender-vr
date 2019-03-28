@@ -7,6 +7,7 @@ extern "C"
 
 #include "BLI_math_matrix.h"
 #include "BLI_math_vector.h"
+#include "BLI_math_geom.h"		// Ray-Tri intersection
 #include "GPU_framebuffer.h"
 #include "GPU_batch.h"
 #include "GPU_shader.h"
@@ -78,17 +79,19 @@ GPUOffScreen* VR_UI_Window::getOffscreen()
 
 void VR_UI_Window::setSize(int width, int height)
 {
-	bool ok = false;
+	bool equal = false;
 	if (m_offscreen) {
 		int ofsWidth = GPU_offscreen_width(m_offscreen);
 		int ofsHeight = GPU_offscreen_height(m_offscreen);
-		ok = ofsWidth == width && ofsHeight == height;
+		equal = ofsWidth == width && ofsHeight == height;
 	}
 
-	if (!ok) {
+	if (!equal) {
 		if (m_offscreen)
 			GPU_offscreen_free(m_offscreen);
 		m_offscreen = GPU_offscreen_create(width, height, 0, false, false, NULL);
+		if (m_batch)
+			GPU_batch_clear(m_batch);
 		m_width = width;
 		m_height = height;
 	}
@@ -106,8 +109,8 @@ void VR_UI_Window::setMatrix(float matrix[4][4])
 
 void VR_UI_Window::getSize(int *width, int *height) const
 {
-	*width = GPU_offscreen_width(m_offscreen);
-	*height = GPU_offscreen_height(m_offscreen);
+	*width = m_width;
+	*height = m_height;
 }
 
 float VR_UI_Window::getAspect() const
@@ -116,6 +119,52 @@ float VR_UI_Window::getAspect() const
 		return (float)m_width / (float)m_height;
 	}
 	return 0;
+}
+
+bool VR_UI_Window::intersectRay(float rayOrigin[3], float rayDir[3], float hitResult[2]) const
+{
+	float matrix[4][4];
+	float aspectMatrix[4][4];
+	unit_m4(aspectMatrix);
+	float aspect = getAspect();
+
+	aspectMatrix[0][0] = 1.0f;
+	aspectMatrix[1][1] = 1.0f;
+	aspectMatrix[2][2] = 1.0f / aspect;
+	aspectMatrix[3][3] = 1.0;
+
+	copy_m4_m4(matrix, m_matrix);
+	mul_m4_m4_pre(matrix, aspectMatrix);
+
+	// TODO Refactor asap!!. Maybe building our own batch
+	float tri1[3][3] = { { -1.0f, 0.0f, -1.0f },{ 1.0f, 0.0f, -1.0f },{ 1.0f, 0.0f, 1.0f } };
+	float uv1[3][2] = { { 0.0f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 1.0f } };
+	float tri2[3][3] = { { -1.0f, 0.0f, -1.0f },{ 1.0f, 0.0f, 1.0f },{ -1.0f, 0.0f, 1.0f } };
+	float uv2[3][2] = { { 0.0f, 0.0f },{ 1.0f, 1.0f },{ 0.0f, 1.0f } };
+
+	for (int i = 0; i < 3; ++i) {
+		mul_m4_v3(matrix, tri1[i]);
+		mul_m4_v3(matrix, tri2[i]);
+	}
+	float dist;
+	float baryc[3];
+	bool hit = isect_ray_tri_v3(rayOrigin, rayDir, tri1[0], tri1[1], tri1[2], &dist, &baryc[1]);
+	if (hit) {
+		baryc[0] = 1.0f - baryc[1] - baryc[2];
+		hitResult[0] = baryc[0] * uv1[0][0] + baryc[1] * uv1[1][0] + baryc[2] * uv1[2][0];
+		hitResult[1] = baryc[0] * uv1[0][1] + baryc[1] * uv1[1][1] + baryc[2] * uv1[2][1];
+		hitResult[2] = dist;
+	}
+	else {
+		hit = isect_ray_tri_v3(rayOrigin, rayDir, tri2[0], tri2[1], tri2[2], &dist, &baryc[1]);
+		if (hit) {
+			baryc[0] = 1.0f - baryc[1] - baryc[2];
+			hitResult[0] = baryc[0] * uv2[0][0] + baryc[1] * uv2[1][0] + baryc[2] * uv2[2][0];
+			hitResult[1] = baryc[0] * uv2[0][1] + baryc[1] * uv2[1][1] + baryc[2] * uv2[2][1];
+			hitResult[2] = dist;
+		}
+	}
+	return hit;
 }
 
 } // extern "C"

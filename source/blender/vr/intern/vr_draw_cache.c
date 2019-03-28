@@ -62,7 +62,7 @@ GPUBatch* DRW_VR_cache_plane3d_get()
 	return SHC.drw_vr_plane3d;
 }
 
-GPUBatch * DRW_VR_segment_get(float p1[3], float p2[3])
+GPUBatch* DRW_VR_segment_get(float p1[3], float p2[3])
 {
 	/* Position Only 3D format */
 	static GPUVertFormat format = { 0 };
@@ -79,3 +79,4 @@ GPUBatch * DRW_VR_segment_get(float p1[3], float p2[3])
 
 	return GPU_batch_create_ex(GPU_PRIM_LINES, vbo, NULL, GPU_BATCH_OWNS_VBO);
 }
+

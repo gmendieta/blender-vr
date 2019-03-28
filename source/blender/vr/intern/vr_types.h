@@ -3,6 +3,13 @@
 
 #include <stdint.h>
 
+typedef enum _VR_Space
+{
+	VR_VR_SPACE,
+	VR_NAV_SPACE,
+	VR_NAV_SCALED_SPACE,
+} VR_Space;
+
 typedef enum _VR_Side
 {
 	VR_LEFT,

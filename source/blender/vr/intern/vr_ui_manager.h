@@ -79,7 +79,6 @@ private:
 	float m_navInvMatrix[4][4];								// Accumulated inverse matrix
 	float m_navScaledMatrix[4][4];							// Accumulated navigation matrix scaled
 	float m_navScaledInvMatrix[4][4];						// Accumulated navigation inverse matrix scaled
-	float m_flyMaxSpeed;
 
 	VR_ControllerState m_currentState[VR_MAX_SIDES];		// Current state of controllers
 	VR_ControllerState m_previousState[VR_MAX_SIDES];		// Previous state of controllers
@@ -87,11 +86,14 @@ private:
 	/// Compute navigation matrix
 	void computeNavMatrix();
 
+	/// Compute a ray from a touch current state
+	void computeTouchControllerRay(unsigned int side, VR_Space space, float rayOrigin[3], float rayDir[3]);
+
 	/// Draw Touch controllers in Navigation Space
 	void drawTouchControllers();
 
 	/// Draw a Ray in Navigation Space
-	void drawRay(float start[3], float dir[3], float length, float color[4]);
+	void drawRay(float rayOrigin[3], float rayDir[3], float rayLen, float rayColor[4]);
 
 	/// Draw graphical user interface
 	void drawUserInterface();

@@ -34,6 +34,9 @@ public:
 	/// Return the aspect of the window
 	float getAspect() const;
 
+	/// Intersect a Ray to the window
+	bool intersectRay(float rayOrigin[3], float rayDir[3], float hitResult[3]) const;
+
 
 protected:
 	int m_width;
@@ -41,8 +44,6 @@ protected:
 	struct GPUBatch *m_batch;
 	struct GPUOffScreen *m_offscreen;
 	float m_matrix[4][4];		// Matrix in Blender space
-	
-
 };
 
 #ifdef __cplusplus

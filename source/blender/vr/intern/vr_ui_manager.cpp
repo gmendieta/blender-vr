@@ -21,8 +21,7 @@ extern "C"
 #include "GPU_state.h"
 
 
-static const float VR_FLY_MAX_SPEED = 0.5f;
-static const float VR_RAY_LENGTH = 100.0f;
+static const float VR_RAY_MAX_LEN = 100.0f;
 
 VR_UI_Manager::VR_UI_Manager()
 {
@@ -39,7 +38,6 @@ VR_UI_Manager::VR_UI_Manager()
 		unit_m4(m_touchMatrices[s]);
 		unit_m4(m_eyeMatrix[s]);
 	}
-	m_flyMaxSpeed = VR_FLY_MAX_SPEED;
 
 	m_bWindow = NULL;
 
@@ -90,6 +88,7 @@ void VR_UI_Manager::setProjectionMatrix(unsigned int side, const float matrix[4]
 
 void VR_UI_Manager::processUserInput()
 {
+
 	computeNavMatrix();
 }
 
@@ -166,13 +165,6 @@ void VR_UI_Manager::computeNavMatrix()
 			// Apply delta to navigation space
 			mul_m4_m4_post(m_navMatrix, deltaMatrix);
 			mul_m4_m4_post(m_navScaledMatrix, deltaMatrix);
-		
-			/*
-			////// Fly ///////
-			float right = m_currentState[VR_RIGHT].mThumbstick[0] * VR_FLY_MAX_SPEED;
-			float forward = m_currentState[VR_RIGHT].mThumbstick[1] * VR_FLY_MAX_SPEED;
-			translate_m4(m_navMatrix, right, forward, 0.0f);
-			*/
 		}
 
 		// Store current navigation inverse for UI
@@ -183,6 +175,24 @@ void VR_UI_Manager::computeNavMatrix()
 		copy_m4_m4(m_touchPrevMatrices[VR_RIGHT], m_touchMatrices[VR_RIGHT]);
 		copy_m4_m4(m_touchPrevMatrices[VR_LEFT], m_touchMatrices[VR_LEFT]);
 	}
+}
+
+void VR_UI_Manager::computeTouchControllerRay(unsigned int side, VR_Space space, float rayOrigin[3], float rayDir[3])
+{
+	float touchMatrix[4][4];
+	copy_m4_m4(touchMatrix, m_touchMatrices[side]);
+	if (space == VR_NAV_SPACE) {
+		mul_m4_m4_pre(touchMatrix, m_navMatrix);
+	}
+	else if (space == VR_NAV_SCALED_SPACE) {
+		mul_m4_m4_pre(touchMatrix, m_navScaledMatrix);
+	}
+	
+	copy_v3_v3(rayOrigin, touchMatrix[3]);
+	// For Oculus, the -Z axis points forward
+	rayDir[0] = 0.0f; rayDir[1] = 0.0f; rayDir[2] = -1.0f;
+	// This multiplication only apply rotation
+	mul_mat3_m4_v3(touchMatrix, rayDir);
 }
 
 void VR_UI_Manager::getNavMatrix(float matrix[4][4], bool scaled)
@@ -262,6 +272,7 @@ void VR_UI_Manager::drawTouchControllers()
 		{ 0.0f, 0.0f, 0.7f, 1.0f },
 		{ 0.7f, 0.0f, 0.0f, 1.0f },
 	};
+	float hitColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 	// TODO Change for a model or custom GPUBatch
 	GPUBatch *batch = DRW_cache_sphere_get();
@@ -278,45 +289,53 @@ void VR_UI_Manager::drawTouchControllers()
 		mul_m4_m4_pre(modelViewProj, m_navScaledMatrix);
 		mul_m4_m4_pre(modelViewProj, m_viewProjectionMatrix);
 
-		float *c = touchColor[touchSide];
-		GPU_batch_uniform_4f(batch, "color", c[0], c[1], c[2], c[3]);
+		float *color = touchColor[touchSide];
+		GPU_batch_uniform_4f(batch, "color", color[0], color[1], color[2], color[3]);
 		GPU_batch_uniform_mat4(batch, "ModelViewProjectionMatrix", modelViewProj);
 		GPU_batch_program_use_begin(batch);
 		GPU_batch_draw_range_ex(batch, 0, 0, false);
 		GPU_batch_program_use_end(batch);
 
-		VR_Buttons triggerButton = touchSide == 0 ? VR_BUTTON_LINDEX_TRIGGER : VR_BUTTON_RINDEX_TRIGGER;
-		if (m_currentState[touchSide].mButtons & triggerButton) {
-			float rayStart[3];
-			// For Oculus, the -Z axis points forward
-			float rayForward[3] = { 0.0f, 0.0f, -1.0f };
-			// This multiplication only apply rotation
-			mul_mat3_m4_v3(m_touchMatrices[touchSide], rayForward);
-			copy_v3_v3(rayStart, m_touchMatrices[touchSide][3]);
-			drawRay(rayStart, rayForward, VR_RAY_LENGTH, c);
+		float rayOrigin[3], rayDir[3], hitResult[3];
+		/* 
+		Compute intersection in Navigation scaled space.
+		If we make UI in non scaled space we have to change the space of intersection
+		*/
+		computeTouchControllerRay(touchSide, VR_Space::VR_NAV_SCALED_SPACE, rayOrigin, rayDir);
+		bool hit = m_mainMenu->intersectRay(rayOrigin, rayDir, hitResult);
+
+		float *rayColor = touchColor[touchSide];
+		float rayLen = VR_RAY_MAX_LEN;
+		if (hit) {
+			print_v3("Hit: ", hitResult);
+			rayColor = hitColor;
+			rayLen = hitResult[2];
 		}
+		// Draw ray in VR space
+		computeTouchControllerRay(touchSide, VR_Space::VR_VR_SPACE, rayOrigin, rayDir);
+		drawRay(rayOrigin, rayDir, rayLen, rayColor);
 	}
 }
 
-void VR_UI_Manager::drawRay(float start[3], float dir[3], float length, float color[4])
+void VR_UI_Manager::drawRay(float rayOrigin[3], float rayDir[3], float rayLen, float rayColor[4])
 {
 	float modelViewProj[4][4];
 	unit_m4(modelViewProj);
 
 	float end[3];
-	copy_v3_v3(end, start);
-	normalize_v3(dir);
-	mul_v3_fl(dir, length);
-	add_v3_v3(end, dir);
+	copy_v3_v3(end, rayOrigin);
+	normalize_v3(rayDir);
+	mul_v3_fl(rayDir, rayLen);
+	add_v3_v3(end, rayDir);
 
-	GPUBatch *batch = DRW_VR_segment_get(start, end);
+	GPUBatch *batch = DRW_VR_segment_get(rayOrigin, end);
 	GPUShader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
 	GPU_batch_program_set_shader(batch, shader);
 
 	mul_m4_m4_pre(modelViewProj, m_navScaledMatrix);
 	mul_m4_m4_pre(modelViewProj, m_viewProjectionMatrix);
 
-	GPU_batch_uniform_4f(batch, "color", color[0], color[1], color[2], color[3]);
+	GPU_batch_uniform_4f(batch, "color", rayColor[0], rayColor[1], rayColor[2], rayColor[3]);
 	GPU_batch_uniform_mat4(batch, "ModelViewProjectionMatrix", modelViewProj);
 	GPU_batch_program_use_begin(batch);
 	GPU_batch_draw_range_ex(batch, 0, 0, false);
