@@ -87,11 +87,10 @@ void VR_UI_Window::setSize(int width, int height)
 	}
 
 	if (!equal) {
-		if (m_offscreen)
+		if (m_offscreen) {
 			GPU_offscreen_free(m_offscreen);
+		}
 		m_offscreen = GPU_offscreen_create(width, height, 0, false, false, NULL);
-		if (m_batch)
-			GPU_batch_clear(m_batch);
 		m_width = width;
 		m_height = height;
 	}

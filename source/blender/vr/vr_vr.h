@@ -1,6 +1,9 @@
 #ifndef __VR_VR_H__
 #define __VR_VR_H__
 
+// Forward
+struct VR_GHOST_Event;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,6 +49,9 @@ int vr_is_initialized();
 /// Get the VR window
 struct wmWindow* vr_window_get();
 
+/// Get the VR window ghost window
+void* vr_ghost_window_get();
+
 /// Set the VR window
 void vr_window_set(struct wmWindow *win);
 
@@ -71,16 +77,16 @@ void vr_draw_region_bind(struct ARegion *ar, int view);
 void vr_draw_region_unbind(struct ARegion *ar, int view);
 
 /// Compute the inverse view matrix
-void vr_view_matrix_compute(uint view, float matrix[4][4]);
+void vr_view_matrix_compute(unsigned int view, float matrix[4][4]);
 
 /// Compute viewplane. Blender will compute projection from that. There some tools like GP that uses this viewplane to work
 void vr_camera_params_compute_viewplane(const struct View3D *v3d, struct CameraParams *params, int winx, int winy, float xasp, float yasp);
 
 /// Set Blender built view matrix
-void vr_set_view_matrix(uint view, float matrix[4][4]);
+void vr_set_view_matrix(unsigned int view, float matrix[4][4]);
 
 /// Set Blender built projection matrix
-void vr_set_projection_matrix(uint view, float matrix[4][4]);
+void vr_set_projection_matrix(unsigned int view, float matrix[4][4]);
 
 /// Begin a frame. Update internal tracking and device inputs
 int vr_begin_frame();
@@ -89,13 +95,19 @@ int vr_begin_frame();
 int vr_end_frame();
 
 /// Called just before Blender drawing
-void vr_region_do_pre_draw(uint view);
+void vr_region_do_pre_draw(unsigned int view);
 
 /// Called just after BLender drawing
-void vr_region_do_post_draw(uint view);
+void vr_region_do_post_draw(unsigned int view);
 
 /// Process the User input using VR devices
 void vr_process_input();
+
+/// Returns the oldest ghost event
+struct VR_GHOST_Event* vr_oldest_ghost_event_get();
+
+/// Removes the oldest ghost event
+void vr_oldest_ghost_event_remove();
 
 
 #ifdef __cplusplus

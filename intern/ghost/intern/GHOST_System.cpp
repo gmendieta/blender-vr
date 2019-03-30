@@ -36,6 +36,8 @@
 #  include "GHOST_NDOFManager.h"
 #endif
 
+#include "GHOST_VRManager.h"
+
 GHOST_System::GHOST_System()
     : m_nativePixel(false),
       m_windowFocus(true),
@@ -46,6 +48,7 @@ GHOST_System::GHOST_System()
 #ifdef WITH_INPUT_NDOF
       m_ndofManager(0),
 #endif
+	  m_vrManager(0),
       m_tabletAPI(GHOST_kTabletAutomatic)
 {
 }
@@ -218,6 +221,9 @@ void GHOST_System::dispatchEvents()
 	}
   #endif
 #endif
+	if (m_vrManager) {
+		m_vrManager->processEvents();
+	}
 
 	if (m_eventManager) {
 		m_eventManager->dispatchEvents();

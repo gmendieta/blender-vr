@@ -93,6 +93,14 @@ wmWindow* vr_window_get()
 	return NULL;
 }
 
+void* vr_ghost_window_get()
+{
+	if (vr.initialized) {
+		return vr.win_vr->ghostwin;
+	}
+	return NULL;
+}
+
 void vr_window_set(struct wmWindow *win)
 {
 	if (!vr.initialized) {
@@ -195,7 +203,7 @@ void vr_draw_region_unbind(struct ARegion *ar, int view)
 	ar->draw_buffer->bound_view = -1;
 }
 
-void vr_view_matrix_compute(uint view, float viewmat[4][4])
+void vr_view_matrix_compute(unsigned int view, float viewmat[4][4])
 {
 	BLI_assert(vr.initialized);
 
@@ -283,12 +291,12 @@ void vr_camera_params_compute_viewplane(const View3D *v3d, CameraParams *params,
 	params->viewplane = viewplane;
 }
 
-void vr_set_view_matrix(uint view, float matrix[4][4])
+void vr_set_view_matrix(unsigned int view, float matrix[4][4])
 {
 	vrUiManager->setViewMatrix(view, matrix);
 }
 
-void vr_set_projection_matrix(uint view, float matrix[4][4])
+void vr_set_projection_matrix(unsigned int view, float matrix[4][4])
 {
 	vrUiManager->setProjectionMatrix(view, matrix);
 }
@@ -338,11 +346,11 @@ int vr_end_frame()
 	
 	for (int view = 0; view < VR_MAX_SIDES; ++view)
 	{
-		uint vr_texture_bindcode;
-		uint view_texture_bindcode;
+		unsigned int vr_texture_bindcode;
+		unsigned int view_texture_bindcode;
 
-		uint vr_fbo;
-		uint view_fbo;
+		unsigned int vr_fbo;
+		unsigned int view_fbo;
 
 		vrHmd->getEyeTextureIdx(view, &vr_texture_bindcode);
 		GPUTexture *view_texture = GPU_viewport_color_texture(vr.viewport[view]);
@@ -393,12 +401,12 @@ void vr_process_input()
 	vrUiManager->processUserInput();
 }
 
-void vr_region_do_pre_draw(uint view)
+void vr_region_do_pre_draw(unsigned int view)
 {
 	vrUiManager->doPreDraw(view);
 }
 
-void vr_region_do_post_draw(uint view)
+void vr_region_do_post_draw(unsigned int view)
 {
 	vrUiManager->doPostDraw(view);
 }
@@ -432,6 +440,21 @@ int vr_shutdown()
 	
 	return 1;
 }
+
+///////////////////////////////////////
+// GHOST Events
+
+struct VR_GHOST_Event* vr_ghost_event_get()
+{
+	return vrUiManager->getOldestGhostEvent();
+}
+
+void vr_ghost_event_remove()
+{
+	vrUiManager->deleteOldestGhostEvent();
+}
+///////////////////////////////////////
+
 
 }
 

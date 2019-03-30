@@ -56,6 +56,8 @@
   #include "GHOST_NDOFManagerWin32.h"
 #endif
 
+#include "GHOST_VRManagerWin32.h"
+
 // Key code values not found in winuser.h
 #ifndef VK_MINUS
 #define VK_MINUS 0xBD
@@ -209,6 +211,7 @@ GHOST_SystemWin32::GHOST_SystemWin32()
 #ifdef WITH_INPUT_NDOF
 	m_ndofManager = new GHOST_NDOFManagerWin32(*this);
 #endif
+	m_vrManager = new GHOST_VRManagerWin32(*this);
 }
 
 GHOST_SystemWin32::~GHOST_SystemWin32()

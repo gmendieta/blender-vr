@@ -1,5 +1,6 @@
 #include "vr_ui_manager.h"
 #include "vr_utils.h"
+#include "vr_ghost_types.h"
 
 #include <string.h>	// memcpy
 
@@ -307,9 +308,10 @@ void VR_UI_Manager::drawTouchControllers()
 		float *rayColor = touchColor[touchSide];
 		float rayLen = VR_RAY_MAX_LEN;
 		if (hit) {
-			print_v3("Hit: ", hitResult);
+			//print_v3("Hit: ", hitResult);
 			rayColor = hitColor;
 			rayLen = hitResult[2];
+			pushGhostEvent(new VR_GHOST_EventCursor(VR_GHOST_kEventCursorMove, hitResult[0] * m_bWindow->sizex, (1.0f - hitResult[1]) * m_bWindow->sizey));
 		}
 		// Draw ray in VR space
 		computeTouchControllerRay(touchSide, VR_Space::VR_VR_SPACE, rayOrigin, rayDir);
@@ -347,6 +349,29 @@ void VR_UI_Manager::drawRay(float rayOrigin[3], float rayDir[3], float rayLen, f
 void VR_UI_Manager::drawUserInterface()
 {
 	m_mainMenu->draw(m_viewProjectionMatrix);
+}
+
+void VR_UI_Manager::pushGhostEvent(VR_GHOST_Event *event)
+{
+	m_events.push_back(event);
+}
+
+struct VR_GHOST_Event* VR_UI_Manager::getOldestGhostEvent()
+{
+	VR_GHOST_Event *event = NULL;
+	if (!m_events.empty()) {
+		event = m_events.front();
+	}
+	return event;
+}
+
+void VR_UI_Manager::deleteOldestGhostEvent()
+{
+	if (!m_events.empty()) {
+		VR_GHOST_Event *event = m_events.front();
+		m_events.pop_front();
+		if (event) delete event;
+	}
 }
 
 } // extern "C"

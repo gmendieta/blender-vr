@@ -2,8 +2,12 @@
 #ifndef __VR_UI_MANAGER_H__
 #define __VR_UI_MANAGER_H__
 
+#include <deque>
+
 #include "vr_types.h"
 #include "vr_ui_window.h"
+
+struct VR_GHOST_Event;
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +58,12 @@ public:
 	/// Update internal textures
 	void updateUiTextures();
 
+	/// Returns the oldest Ghost event
+	struct VR_GHOST_Event* getOldestGhostEvent();
+
+	/// Delete the oldest Ghost event
+	void deleteOldestGhostEvent();
+
 private:
 
 	const wmWindow *m_bWindow;
@@ -80,6 +90,10 @@ private:
 	float m_navScaledMatrix[4][4];							// Accumulated navigation matrix scaled
 	float m_navScaledInvMatrix[4][4];						// Accumulated navigation inverse matrix scaled
 
+	// GHOST Events
+	std::deque<VR_GHOST_Event*> m_events;
+
+
 	VR_ControllerState m_currentState[VR_MAX_SIDES];		// Current state of controllers
 	VR_ControllerState m_previousState[VR_MAX_SIDES];		// Previous state of controllers
 
@@ -97,6 +111,9 @@ private:
 
 	/// Draw graphical user interface
 	void drawUserInterface();
+
+	/// Ghost Events
+	void pushGhostEvent(VR_GHOST_Event *event);
 };
 
 #ifdef __cplusplus

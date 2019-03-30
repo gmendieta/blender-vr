@@ -43,6 +43,7 @@ class GHOST_WindowManager;
 #ifdef WITH_INPUT_NDOF
 class GHOST_NDOFManager;
 #endif
+class GHOST_VRManager;
 
 /**
  * Implementation of platform independent functionality of the GHOST_ISystem
@@ -372,6 +373,8 @@ protected:
 	/** The N-degree of freedom device manager */
 	GHOST_NDOFManager *m_ndofManager;
 #endif
+
+	GHOST_VRManager *m_vrManager;
 
 	/** Prints all the events. */
 #ifdef GHOST_DEBUG
