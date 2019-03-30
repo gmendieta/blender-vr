@@ -32,7 +32,7 @@ bool GHOST_VRManagerWin32::processEvents()
 		return false;
 	}
 	VR_GHOST_Event *vr_event = NULL;
-	while (vr_event = vr_oldest_ghost_event_get()) {
+	while (vr_event = vr_ghost_event_pop()) {
 		GHOST_Event *event = NULL;
 
 		switch (vr_event->getType()) {
@@ -44,8 +44,8 @@ bool GHOST_VRManagerWin32::processEvents()
 		if (event) {
 			m_system.pushEvent(event);
 		}
-		vr_oldest_ghost_event_remove();
 	}
+	vr_ghost_event_clear();
 	
 	return true;
 }

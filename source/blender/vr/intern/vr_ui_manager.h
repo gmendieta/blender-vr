@@ -58,11 +58,11 @@ public:
 	/// Update internal textures
 	void updateUiTextures();
 
-	/// Returns the oldest Ghost event
-	struct VR_GHOST_Event* getOldestGhostEvent();
+	/// Returns the first Ghost event
+	struct VR_GHOST_Event* popGhostEvent();
 
-	/// Delete the oldest Ghost event
-	void deleteOldestGhostEvent();
+	/// Delete Ghost events
+	void clearGhostEvents();
 
 private:
 
@@ -92,6 +92,7 @@ private:
 
 	// GHOST Events
 	std::deque<VR_GHOST_Event*> m_events;
+	std::deque<VR_GHOST_Event*> m_handledEvents;
 
 
 	VR_ControllerState m_currentState[VR_MAX_SIDES];		// Current state of controllers

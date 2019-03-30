@@ -30,7 +30,7 @@ class GHOST_EventKey;
 class GHOST_VRManagerWin32: public GHOST_VRManager
 {
 public:
-	GHOST_VRManagerWin32(GHOST_System&);
+	GHOST_VRManagerWin32(GHOST_System &sys);
 	virtual ~GHOST_VRManagerWin32() {}
 
 	bool processEvents() override;

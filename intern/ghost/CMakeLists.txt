@@ -108,6 +108,14 @@ if(WITH_INPUT_NDOF)
 	)
 endif()
 
+if(WITH_VR)
+	list(APPEND SRC
+        intern/GHOST_VRManager.cpp
+
+		intern/GHOST_VRManager.h
+		)
+endif()
+
 if(WITH_HEADLESS OR WITH_GHOST_SDL)
 	if(WITH_HEADLESS)
 		list(APPEND SRC
@@ -297,6 +305,15 @@ elseif(WIN32)
 			intern/GHOST_NDOFManagerWin32.h
 		)
 	endif()
+
+	if(WITH_VR)
+		list(APPEND SRC
+			intern/GHOST_VRManagerWin32.cpp
+
+			intern/GHOST_VRManagerWin32.h
+		)
+endif()
+    
 endif()
 
 if(WITH_GL_EGL AND NOT (WITH_HEADLESS OR WITH_GHOST_SDL))

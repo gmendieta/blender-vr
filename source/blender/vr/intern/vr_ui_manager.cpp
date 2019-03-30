@@ -356,21 +356,28 @@ void VR_UI_Manager::pushGhostEvent(VR_GHOST_Event *event)
 	m_events.push_back(event);
 }
 
-struct VR_GHOST_Event* VR_UI_Manager::getOldestGhostEvent()
+struct VR_GHOST_Event* VR_UI_Manager::popGhostEvent()
 {
 	VR_GHOST_Event *event = NULL;
 	if (!m_events.empty()) {
 		event = m_events.front();
+		m_events.pop_front();
+		m_handledEvents.push_back(event);
 	}
 	return event;
 }
 
-void VR_UI_Manager::deleteOldestGhostEvent()
+void VR_UI_Manager::clearGhostEvents()
 {
-	if (!m_events.empty()) {
+	while (!m_events.empty()) {
 		VR_GHOST_Event *event = m_events.front();
 		m_events.pop_front();
-		if (event) delete event;
+		delete event;
+	}
+	while (!m_handledEvents.empty()) {
+		VR_GHOST_Event *event = m_handledEvents.front();
+		m_handledEvents.pop_front();
+		delete event;
 	}
 }
 

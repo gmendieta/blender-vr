@@ -29,7 +29,7 @@ class GHOST_EventDragnDrop;
 class GHOST_VRManager
 {
 public:
-	GHOST_VRManager(GHOST_System&);
+	GHOST_VRManager(GHOST_System &sys);
 	virtual ~GHOST_VRManager() {}
 
 	virtual bool processEvents() = 0;

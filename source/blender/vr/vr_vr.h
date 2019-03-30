@@ -104,10 +104,10 @@ void vr_region_do_post_draw(unsigned int view);
 void vr_process_input();
 
 /// Returns the oldest ghost event
-struct VR_GHOST_Event* vr_oldest_ghost_event_get();
+struct VR_GHOST_Event* vr_ghost_event_pop();
 
 /// Removes the oldest ghost event
-void vr_oldest_ghost_event_remove();
+void vr_ghost_event_clear();
 
 
 #ifdef __cplusplus

@@ -444,14 +444,14 @@ int vr_shutdown()
 ///////////////////////////////////////
 // GHOST Events
 
-struct VR_GHOST_Event* vr_ghost_event_get()
+struct VR_GHOST_Event* vr_ghost_event_pop()
 {
-	return vrUiManager->getOldestGhostEvent();
+	return vrUiManager->popGhostEvent();
 }
 
-void vr_ghost_event_remove()
+void vr_ghost_event_clear()
 {
-	vrUiManager->deleteOldestGhostEvent();
+	vrUiManager->clearGhostEvents();
 }
 ///////////////////////////////////////
 
