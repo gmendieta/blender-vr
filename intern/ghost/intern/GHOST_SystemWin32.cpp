@@ -211,6 +211,7 @@ GHOST_SystemWin32::GHOST_SystemWin32()
 #ifdef WITH_INPUT_NDOF
 	m_ndofManager = new GHOST_NDOFManagerWin32(*this);
 #endif
+
 	m_vrManager = new GHOST_VRManagerWin32(*this);
 }
 

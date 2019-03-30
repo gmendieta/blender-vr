@@ -358,6 +358,9 @@ GHOST_TSuccess GHOST_System::exit()
 	m_ndofManager = NULL;
 #endif
 
+	delete m_vrManager;
+	m_vrManager = NULL;
+
 	return GHOST_kSuccess;
 }
 
