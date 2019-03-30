@@ -17,6 +17,10 @@
 # ##### END GPL LICENSE BLOCK #####
 
 # <pep8 compliant>
+from .properties_animviz import (
+    MotionPathButtonsPanel,
+    MotionPathButtonsPanel_display,
+)
 import bpy
 from bpy.types import Panel, Menu
 from rna_prop_ui import PropertyPanel
@@ -264,7 +268,7 @@ class OBJECT_PT_display(ObjectButtonsPanel, Panel):
 
 
 class OBJECT_PT_display_bounds(ObjectButtonsPanel, Panel):
-    bl_label = "Boundary"
+    bl_label = "Bounds"
     bl_parent_id = "OBJECT_PT_display"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -309,12 +313,6 @@ class OBJECT_PT_instancing(ObjectButtonsPanel, Panel):
             col = flow.column(align=True)
             col.prop(ob, "show_instancer_for_viewport")
             col.prop(ob, "show_instancer_for_render")
-
-
-from .properties_animviz import (
-    MotionPathButtonsPanel,
-    MotionPathButtonsPanel_display,
-)
 
 
 class OBJECT_PT_instancing_size(ObjectButtonsPanel, Panel):

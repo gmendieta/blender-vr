@@ -88,6 +88,8 @@ const EnumPropertyItem rna_enum_constraint_type_items[] = {
 	{0, "", 0, N_("Relationship"), ""},
 	{CONSTRAINT_TYPE_ACTION,     "ACTION", ICON_CONSTRAINT, "Action",
 	                             "Use transform property of target to look up pose for owner from an Action"},
+	{CONSTRAINT_TYPE_ARMATURE,   "ARMATURE", ICON_CONSTRAINT, "Armature",
+	                             "Apply weight-blended transformation from multiple bones like the Armature modifier"},
 	{CONSTRAINT_TYPE_CHILDOF,    "CHILD_OF", ICON_CONSTRAINT, "Child Of",
 	                             "Make target the 'detachable' parent of owner"},
 	{CONSTRAINT_TYPE_MINMAX,     "FLOOR", ICON_CONSTRAINT, "Floor",
@@ -102,8 +104,6 @@ const EnumPropertyItem rna_enum_constraint_type_items[] = {
 	                             "Custom constraint(s) written in Python (Not yet implemented)"}, */
 	{CONSTRAINT_TYPE_SHRINKWRAP, "SHRINKWRAP", ICON_CONSTRAINT, "Shrinkwrap",
 	                             "Restrict movements to surface of target mesh"},
-	{CONSTRAINT_TYPE_ARMATURE, "ARMATURE", ICON_CONSTRAINT, "Armature",
-	                           "Apply weight-blended transformation from multiple bones like the Armature modifier"},
 	{0, NULL, 0, NULL, NULL},
 };
 
@@ -449,7 +449,7 @@ static void rna_ArmatureConstraint_target_remove(
 	bConstraintTarget *tgt = target_ptr->data;
 
 	if (BLI_findindex(&acon->targets, tgt) < 0) {
-		BKE_reportf(reports, RPT_ERROR, "Target is not in the constraint target list");
+		BKE_report(reports, RPT_ERROR, "Target is not in the constraint target list");
 		return;
 	}
 
@@ -2624,18 +2624,21 @@ void RNA_def_constraint(BlenderRNA *brna)
 	RNA_def_property_enum_items(prop, owner_space_pchan_items);
 	RNA_def_property_enum_funcs(prop, NULL, NULL, "rna_Constraint_owner_space_itemf");
 	RNA_def_property_ui_text(prop, "Owner Space", "Space that owner is evaluated in");
+	RNA_def_property_update(prop, NC_OBJECT | ND_CONSTRAINT, "rna_Constraint_update");
 
 	prop = RNA_def_property(srna, "target_space", PROP_ENUM, PROP_NONE);
 	RNA_def_property_enum_sdna(prop, NULL, "tarspace");
 	RNA_def_property_enum_items(prop, target_space_pchan_items);
 	RNA_def_property_enum_funcs(prop, NULL, NULL, "rna_Constraint_target_space_itemf");
 	RNA_def_property_ui_text(prop, "Target Space", "Space that target is evaluated in");
+	RNA_def_property_update(prop, NC_OBJECT | ND_CONSTRAINT, "rna_Constraint_update");
 
 	/* flags */
 	prop = RNA_def_property(srna, "mute", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_sdna(prop, NULL, "flag", CONSTRAINT_OFF);
 	RNA_def_property_override_flag(prop, PROPOVERRIDE_OVERRIDABLE_STATIC);
 	RNA_def_property_ui_text(prop, "Disable", "Enable/Disable Constraint");
+	RNA_def_property_update(prop, NC_OBJECT | ND_CONSTRAINT, "rna_Constraint_update");
 
 	prop = RNA_def_property(srna, "show_expanded", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_sdna(prop, NULL, "flag", CONSTRAINT_EXPAND);

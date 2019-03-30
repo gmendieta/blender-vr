@@ -227,8 +227,7 @@ static bool gpencil_draw_poll(bContext *C)
 		if ((obact) && (obact->type == OB_GPENCIL) &&
 		    (obact->mode == OB_MODE_PAINT_GPENCIL))
 		{
-			CTX_wm_operator_poll_msg_set(C,
-				"Annotation cannot be used in grease pencil draw mode");
+			CTX_wm_operator_poll_msg_set(C, "Annotation cannot be used in grease pencil draw mode");
 			return false;
 		}
 	}
@@ -1715,6 +1714,7 @@ static void gpencil_draw_status_indicators(bContext *C, tGPsdata *p)
 
 		case GP_STATUS_ERROR:
 		case GP_STATUS_DONE:
+		case GP_STATUS_CAPTURE:
 			/* clear status string */
 			ED_workspace_status_text(C, NULL);
 			break;
@@ -1786,9 +1786,9 @@ static void annotation_draw_apply_event(wmOperator *op, const wmEvent *event, De
 	float mousef[2];
 	int tablet = 0;
 
-	 /* convert from window-space to area-space mouse coordinates
-	  * add any x,y override position for fake events
-	  */
+	/* convert from window-space to area-space mouse coordinates
+	 * add any x,y override position for fake events
+	 */
 	p->mval[0] = (float)event->mval[0] - x;
 	p->mval[1] = (float)event->mval[1] - y;
 
@@ -2132,8 +2132,7 @@ static void annotation_add_missing_events(bContext *C, wmOperator *op, const wmE
 		interp_v2_v2v2(pt, a, b, 0.5f);
 		sub_v2_v2v2(pt, b, pt);
 		/* create fake event */
-		annotation_draw_apply_event(op, event, CTX_data_depsgraph(C),
-			pt[0], pt[1]);
+		annotation_draw_apply_event(op, event, CTX_data_depsgraph(C), pt[0], pt[1]);
 	}
 	else if (dist >= factor) {
 		int slices = 2 + (int)((dist - 1.0) / factor);
@@ -2142,8 +2141,9 @@ static void annotation_add_missing_events(bContext *C, wmOperator *op, const wmE
 			interp_v2_v2v2(pt, a, b, n * i);
 			sub_v2_v2v2(pt, b, pt);
 			/* create fake event */
-			annotation_draw_apply_event(op, event, CTX_data_depsgraph(C),
-				pt[0], pt[1]);
+			annotation_draw_apply_event(
+			        op, event, CTX_data_depsgraph(C),
+			        pt[0], pt[1]);
 		}
 	}
 }
@@ -2280,8 +2280,8 @@ static int gpencil_draw_modal(bContext *C, wmOperator *op, const wmEvent *event)
 
 				if (G.debug & G_DEBUG) {
 					printf("found alternative region %p (old was %p) - at %d %d (sa: %d %d -> %d %d)\n",
-						current_region, p->ar, event->x, event->y,
-						p->sa->totrct.xmin, p->sa->totrct.ymin, p->sa->totrct.xmax, p->sa->totrct.ymax);
+					       current_region, p->ar, event->x, event->y,
+					       p->sa->totrct.xmin, p->sa->totrct.ymin, p->sa->totrct.xmax, p->sa->totrct.ymax);
 				}
 
 				if (current_region) {

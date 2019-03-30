@@ -68,7 +68,7 @@
  * before being re-evaluated.
  * For example, we need to call this before BKE_mesh_new_from_object(),
  * in case we removed/added modifiers in the evaluated object.
- **/
+ */
 void BKE_object_eval_reset(Object *ob_eval)
 {
 	BKE_object_free_derived_caches(ob_eval);
@@ -178,10 +178,10 @@ void BKE_object_handle_data_update(
 			}
 #endif
 			if (em) {
-				makeDerivedMesh(depsgraph, scene, ob, em,  &cddata_masks, false); /* was CD_MASK_BAREMESH */
+				makeDerivedMesh(depsgraph, scene, ob, em,  &cddata_masks); /* was CD_MASK_BAREMESH */
 			}
 			else {
-				makeDerivedMesh(depsgraph, scene, ob, NULL, &cddata_masks, false);
+				makeDerivedMesh(depsgraph, scene, ob, NULL, &cddata_masks);
 			}
 			break;
 		}

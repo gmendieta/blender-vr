@@ -275,16 +275,12 @@ static void rna_Object_hide_update(Main *bmain, Scene *UNUSED(scene), PointerRNA
 	WM_main_add_notifier(NC_OBJECT | ND_DRAW, &ob->id);
 }
 
-static void rna_MaterialIndex_update(Main *bmain, Scene *UNUSED(scene), PointerRNA *ptr)
+static void rna_MaterialIndex_update(Main *UNUSED(bmain), Scene *UNUSED(scene), PointerRNA *ptr)
 {
-	/* update the material of all brushes not pinned */
 	Object *ob = (Object *)ptr->id.data;
 	if (ob && ob->type == OB_GPENCIL) {
-		Material *ma = give_current_material(ob, ob->actcol);
-		if (ma != NULL) {
-			BKE_brush_update_material(bmain, ma, NULL);
-			WM_main_add_notifier(NC_SPACE | ND_SPACE_VIEW3D, NULL);
-		}
+		/* notifying material property in topbar */
+		WM_main_add_notifier(NC_SPACE | ND_SPACE_VIEW3D, NULL);
 	}
 }
 
@@ -821,6 +817,11 @@ static void rna_Object_active_material_set(PointerRNA *ptr, PointerRNA value)
 	BLI_assert(BKE_id_is_in_global_main(&ob->id));
 	BLI_assert(BKE_id_is_in_global_main(value.data));
 	assign_material(G_MAIN, ob, value.data, ob->actcol, BKE_MAT_ASSIGN_EXISTING);
+
+	if (ob && ob->type == OB_GPENCIL) {
+		/* notifying material property in topbar */
+		WM_main_add_notifier(NC_SPACE | ND_SPACE_VIEW3D, NULL);
+	}
 }
 
 static int rna_Object_active_material_editable(PointerRNA *ptr, const char **UNUSED(r_info))
@@ -2503,6 +2504,11 @@ static void rna_def_object(BlenderRNA *brna)
 	prop = RNA_def_property(srna, "show_empty_image_orthographic", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_negative_sdna(prop, NULL, "empty_image_visibility_flag", OB_EMPTY_IMAGE_HIDE_ORTHOGRAPHIC);
 	RNA_def_property_ui_text(prop, "Display in Orthographic Mode", "Display image in orthographic mode");
+	RNA_def_property_update(prop, NC_OBJECT | ND_DRAW, NULL);
+
+	prop = RNA_def_property(srna, "use_empty_image_alpha", PROP_BOOLEAN, PROP_NONE);
+	RNA_def_property_boolean_sdna(prop, NULL, "empty_image_flag", OB_EMPTY_IMAGE_USE_ALPHA_BLEND);
+	RNA_def_property_ui_text(prop, "Use Alpha", "Use alpha blending instead of alpha test (can produce sorting artifacts)");
 	RNA_def_property_update(prop, NC_OBJECT | ND_DRAW, NULL);
 
 	static EnumPropertyItem prop_empty_image_side_items[] = {

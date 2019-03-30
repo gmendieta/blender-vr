@@ -318,6 +318,7 @@ void BKE_scene_copy_data(Main *bmain, Scene *sce_dst, const Scene *sce_src, cons
 	}
 
 	sce_dst->eevee.light_cache = NULL;
+	sce_dst->eevee.light_cache_info[0] = '\0';
 	/* TODO Copy the cache. */
 }
 
@@ -339,6 +340,9 @@ Scene *BKE_scene_copy(Main *bmain, Scene *sce, int type)
 		sce_copy->unit = sce->unit;
 		sce_copy->physics_settings = sce->physics_settings;
 		sce_copy->audio = sce->audio;
+		sce_copy->eevee = sce->eevee;
+		sce_copy->eevee.light_cache = NULL;
+		sce_copy->eevee.light_cache_info[0] = '\0';
 
 		if (sce->id.properties)
 			sce_copy->id.properties = IDP_CopyProperty(sce->id.properties);
@@ -1639,11 +1643,11 @@ int get_render_child_particle_number(const RenderData *r, int num, bool for_rend
 }
 
 /**
-  * Helper function for the SETLOOPER and SETLOOPER_VIEW_LAYER macros
-  *
-  * It iterates over the bases of the active layer and then the bases
-  * of the active layer of the background (set) scenes recursively.
-  */
+ * Helper function for the SETLOOPER and SETLOOPER_VIEW_LAYER macros
+ *
+ * It iterates over the bases of the active layer and then the bases
+ * of the active layer of the background (set) scenes recursively.
+ */
 Base *_setlooper_base_step(Scene **sce_iter, ViewLayer *view_layer, Base *base)
 {
 	if (base && base->next) {
@@ -1731,9 +1735,8 @@ void BKE_scene_object_base_flag_sync_from_object(Base *base)
 	Object *ob = base->object;
 	base->flag = ob->flag;
 
-	if ((ob->flag & SELECT) != 0) {
+	if ((ob->flag & SELECT) != 0 && (base->flag & BASE_SELECTABLE) != 0) {
 		base->flag |= BASE_SELECTED;
-		BLI_assert((base->flag & BASE_SELECTABLE) != 0);
 	}
 	else {
 		base->flag &= ~BASE_SELECTED;
