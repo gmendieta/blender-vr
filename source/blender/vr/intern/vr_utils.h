@@ -4,7 +4,7 @@
 #include "BLI_math_matrix.h"
 
 /// Build a matrix from a Oculus quaternion and vector. Oculus Space
-static void vr_oculus_oculus_matrix_build(float q[4], float p[3], float matrix[4][4])
+static void vr_oculus_oculus_matrix_build(const float q[4], const float p[3], float matrix[4][4])
 {
 	// The different methods to convert a Quaternion to a Rotation matrix. We are using first one
 	// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
@@ -48,7 +48,7 @@ static void vr_oculus_oculus_matrix_build(float q[4], float p[3], float matrix[4
 }
 
 /// Transforms a Oculus Pose to a Blender matrix
-static void vr_oculus_blender_matrix_build(float q[4], float p[3], float matrix[4][4])
+static void vr_oculus_blender_matrix_build(const float q[4], const float p[3], float matrix[4][4])
 {
 	// The different methods to convert a Quaternion to a Rotation matrix. We are using first one
 	// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm

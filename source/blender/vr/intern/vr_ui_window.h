@@ -28,6 +28,9 @@ public:
 	/// Set the transformation matrix
 	void setMatrix(float matrix[4][4]);
 
+	/// Set the current navigation matrix
+	void setNavMatrix(float navMatrix[4][4]);
+
 	/// Return the size of the window
 	void getSize(int *width, int *height) const;
 
@@ -43,7 +46,8 @@ protected:
 	int m_height;
 	struct GPUBatch *m_batch;
 	struct GPUOffScreen *m_offscreen;
-	float m_matrix[4][4];		// Matrix in Blender space
+	float m_matrix[4][4];				// Matrix in Blender space
+	float m_navMatrix[4][4];			// Navigation Scaled matrix
 };
 
 #ifdef __cplusplus

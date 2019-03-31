@@ -9,14 +9,21 @@ typedef enum _VR_GHOST_TButtonMask {
 	VR_GHOST_kButtonNumMasks
 } VR_GHOST_TButtonMask;
 
+typedef enum _VR_GHOST_TKey {
+	VR_GHOST_kKeyDownArrow,
+	VR_GHOST_kKeyUpArrow,
+	VR_GHOST_kKeyLeftArrow,
+	VR_GHOST_kKeyRightArrow
+} VR_GHOST_TKey;
+
 typedef enum _VR_GHOST_TEventType {
 	VR_GHOST_kEventCursorMove,     /// Mouse move event
 	VR_GHOST_kEventButtonDown,     /// Mouse button event
 	VR_GHOST_kEventButtonUp,       /// Mouse button event
 	//VR_GHOST_kEventWheel,          /// Mouse wheel event
 
-	//VR_GHOST_kEventKeyDown,
-	//VR_GHOST_kEventKeyUp,
+	VR_GHOST_kEventKeyDown,
+	VR_GHOST_kEventKeyUp,
 	//VR_THOST_kEventNumTypes
 } VR_GHOST_TEventType;
 
@@ -84,6 +91,22 @@ public:
 	}
 protected:
 	VR_GHOST_TButtonMask m_buttonMask;
+};
+
+struct VR_GHOST_EventKey : public VR_GHOST_Event
+{
+	VR_GHOST_EventKey(VR_GHOST_TEventType type, VR_GHOST_TKey key):
+		VR_GHOST_Event(type),
+		m_key(key)
+	{
+	}
+
+	VR_GHOST_TKey getKey() const
+	{
+		return m_key;
+	}
+protected:
+	VR_GHOST_TKey m_key;
 };
 
 #endif

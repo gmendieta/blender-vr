@@ -13,13 +13,14 @@ extern "C"
 #include "GPU_shader.h"
 #include "GPU_texture.h"
 
-VR_UI_Window::VR_UI_Window()
+VR_UI_Window::VR_UI_Window():
+	m_width(0),
+	m_height(0),
+	m_batch(NULL),
+	m_offscreen(NULL)
 {
-	m_width = 0;
-	m_height = 0;
-	m_offscreen = NULL;
-	m_batch = NULL;
 	unit_m4(m_matrix);
+	unit_m4(m_navMatrix);
 }
 
 VR_UI_Window::~VR_UI_Window()
@@ -36,19 +37,21 @@ void VR_UI_Window::draw(float viewProj[4][4])
 		m_batch = DRW_VR_cache_plane3d_get();
 	}
 
-	float modelViewProj[4][4];
-	copy_m4_m4(modelViewProj, m_matrix);
-
+	float aspect = getAspect();
 	float aspectMatrix[4][4];
 	unit_m4(aspectMatrix);
-	float aspect = getAspect();
 
 	aspectMatrix[0][0] = 1.0f;
 	aspectMatrix[1][1] = 1.0f;
 	aspectMatrix[2][2] = 1.0f / aspect;
 	aspectMatrix[3][3] = 1.0;
-	
-	mul_m4_m4_pre(modelViewProj, aspectMatrix);
+
+	float modelViewProj[4][4];
+
+	copy_m4_m4(modelViewProj, aspectMatrix);
+	mul_m4_m4_pre(modelViewProj, m_matrix);
+	mul_m4_m4_pre(modelViewProj, m_navMatrix);
+
 	mul_m4_m4_pre(modelViewProj, viewProj);
 	
 	GPUFrameBuffer *fbo;
@@ -106,6 +109,11 @@ void VR_UI_Window::setMatrix(float matrix[4][4])
 	copy_m4_m4(m_matrix, matrix);
 }
 
+void VR_UI_Window::setNavMatrix(float navMatrix[4][4])
+{
+	copy_m4_m4(m_navMatrix, navMatrix);
+}
+
 void VR_UI_Window::getSize(int *width, int *height) const
 {
 	*width = m_width;
@@ -120,20 +128,21 @@ float VR_UI_Window::getAspect() const
 	return 0;
 }
 
-bool VR_UI_Window::intersectRay(float rayOrigin[3], float rayDir[3], float hitResult[2]) const
+bool VR_UI_Window::intersectRay(float rayOrigin[3], float rayDir[3], float hitResult[3]) const
 {
-	float matrix[4][4];
+	float aspect = getAspect();
+	float menuMatrix[4][4];
 	float aspectMatrix[4][4];
 	unit_m4(aspectMatrix);
-	float aspect = getAspect();
 
 	aspectMatrix[0][0] = 1.0f;
 	aspectMatrix[1][1] = 1.0f;
 	aspectMatrix[2][2] = 1.0f / aspect;
 	aspectMatrix[3][3] = 1.0;
 
-	copy_m4_m4(matrix, m_matrix);
-	mul_m4_m4_pre(matrix, aspectMatrix);
+	copy_m4_m4(menuMatrix, aspectMatrix);
+	mul_m4_m4_pre(menuMatrix, m_matrix);
+	mul_m4_m4_pre(menuMatrix, m_navMatrix);
 
 	// TODO Refactor asap!!. Maybe building our own batch
 	float tri1[3][3] = { { -1.0f, 0.0f, -1.0f },{ 1.0f, 0.0f, -1.0f },{ 1.0f, 0.0f, 1.0f } };
@@ -142,8 +151,8 @@ bool VR_UI_Window::intersectRay(float rayOrigin[3], float rayDir[3], float hitRe
 	float uv2[3][2] = { { 0.0f, 0.0f },{ 1.0f, 1.0f },{ 0.0f, 1.0f } };
 
 	for (int i = 0; i < 3; ++i) {
-		mul_m4_v3(matrix, tri1[i]);
-		mul_m4_v3(matrix, tri2[i]);
+		mul_m4_v3(menuMatrix, tri1[i]);
+		mul_m4_v3(menuMatrix, tri2[i]);
 	}
 	float dist;
 	float baryc[3];

@@ -52,6 +52,16 @@ bool GHOST_VRManagerWin32::processEvents()
 				event = processButtonEvents(eventButton);
 				break;
 			}
+			case VR_GHOST_kEventKeyDown: {
+				VR_GHOST_EventKey *eventKey = (VR_GHOST_EventKey*)vr_event;
+				event = processKeyEvents(eventKey);
+				break;
+			}
+			case VR_GHOST_kEventKeyUp: {
+				VR_GHOST_EventKey *eventKey = (VR_GHOST_EventKey*)vr_event;
+				event = processKeyEvents(eventKey);
+				break;
+			}							 
 		}
 		if (event) {
 			m_system.pushEvent(event);
@@ -114,5 +124,39 @@ GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButt
 
 GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey *event)
 {
-	return NULL;
+	GHOST_WindowWin32 *window = (GHOST_WindowWin32*)m_system.getWindowManager()->getActiveWindow();
+	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
+
+	GHOST_TEventType eventType = GHOST_kEventKeyDown;
+	GHOST_TKey key = GHOST_kKeyDownArrow;
+
+	switch (event->getType()) {
+		case VR_GHOST_kEventKeyDown:
+			eventType = GHOST_kEventKeyDown;
+			break;
+		case VR_GHOST_kEventKeyUp:
+			eventType = GHOST_kEventKeyUp;
+			break;
+	}
+
+	switch (event->getKey()) {
+		case VR_GHOST_kKeyDownArrow:
+			key = GHOST_kKeyDownArrow;
+			break;
+		case VR_GHOST_kKeyUpArrow:
+			key = GHOST_kKeyUpArrow;
+			break;
+		case VR_GHOST_kKeyLeftArrow:
+			key = GHOST_kKeyLeftArrow;
+			break;
+		case VR_GHOST_kKeyRightArrow:
+			key = GHOST_kKeyRightArrow;
+			break;
+	}
+
+	return new GHOST_EventKey(system->getMilliSeconds(),
+		eventType,
+		window,
+		key
+	); 
 }

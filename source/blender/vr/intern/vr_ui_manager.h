@@ -24,6 +24,14 @@ class VR_UI_Manager
 		bool m_hit;
 		float m_uv[2];
 		float m_dist;
+		VR_UI_Window *m_window;
+
+		void clear() {
+			m_hit = false;
+			m_dist = 0.0f;
+			m_uv[0] = m_uv[1] = 0.0f;
+			m_window = NULL;
+		}
 	} VR_UI_HitResult;
 
 public:
@@ -77,15 +85,16 @@ private:
 	const wmWindow *m_bWindow;
 	VR_UI_Window *m_mainMenu;
 
+	bool m_isNavigating{ false };							// Flag to control whether the user is navigating or not
+	bool m_isMovingMenu{ false };							// Flag to control whether the user is moving a menu or not
+
 	float m_bProjectionMatrix[VR_MAX_SIDES][4][4];			// Blender built Projection matrix
 	float m_bViewMatrix[VR_MAX_SIDES][4][4];				// Blender built View matrix
 
 	float m_viewMatrix[4][4];								// Cache view matrix
 	float m_viewProjectionMatrix[4][4];						// Cache view projection matrix
 
-	bool m_isNavigating{ false };							// Flag to control whether the user is navigating or not
 	float m_eyeMatrix[VR_MAX_SIDES][4][4];					// Eye matrices
-
 	float m_headMatrix[4][4];								// Current Head matrix
 	float m_headInvMatrix[4][4];							// Current Head inverse matrix
 
@@ -97,6 +106,8 @@ private:
 	float m_navScaledMatrix[4][4];							// Accumulated navigation matrix scaled
 	float m_navScaledInvMatrix[4][4];						// Accumulated navigation inverse matrix scaled
 
+	float m_menuPrevMatrix[4][4];							// Previous Menu matrix for Menu moving
+
 	// GHOST Events
 	std::deque<VR_GHOST_Event*> m_events;
 	std::deque<VR_GHOST_Event*> m_handledEvents;
@@ -106,6 +117,12 @@ private:
 	VR_ControllerState m_previousState[VR_MAX_SIDES];		// Previous state of controllers
 
 	VR_UI_HitResult m_hitResult[VR_MAX_SIDES];						// Hit States
+
+	/// Compute Menu Ray hits
+	void computeMenuRayHits();
+
+	/// Compute Menu matrix
+	void computeMenuMatrix();
 
 	/// Compute Ghost events
 	void computeGhostEvents();
