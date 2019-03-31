@@ -441,6 +441,10 @@ bool GHOST_SystemWin32::processEvents(bool waitForEvent)
 			::DispatchMessageW(&msg);
 			hasEventHandled = true;
 		}
+		// WITH_VR
+		if (m_vrManager) {
+			hasEventHandled |= m_vrManager->processEvents();
+		}
 	} while (waitForEvent && !hasEventHandled);
 
 	return hasEventHandled;

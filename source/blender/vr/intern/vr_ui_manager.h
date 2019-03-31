@@ -18,6 +18,14 @@ struct GPUOffScreen;
 
 class VR_UI_Manager
 {
+	// Hit data for UI
+	typedef struct _VR_UI_HitResult
+	{
+		bool m_hit;
+		float m_uv[2];
+		float m_dist;
+	} VR_UI_HitResult;
+
 public:
 	VR_UI_Manager();
 	~VR_UI_Manager();
@@ -69,7 +77,6 @@ private:
 	const wmWindow *m_bWindow;
 	VR_UI_Window *m_mainMenu;
 
-
 	float m_bProjectionMatrix[VR_MAX_SIDES][4][4];			// Blender built Projection matrix
 	float m_bViewMatrix[VR_MAX_SIDES][4][4];				// Blender built View matrix
 
@@ -97,6 +104,11 @@ private:
 
 	VR_ControllerState m_currentState[VR_MAX_SIDES];		// Current state of controllers
 	VR_ControllerState m_previousState[VR_MAX_SIDES];		// Previous state of controllers
+
+	VR_UI_HitResult m_hitResult[VR_MAX_SIDES];						// Hit States
+
+	/// Compute Ghost events
+	void computeGhostEvents();
 
 	/// Compute navigation matrix
 	void computeNavMatrix();

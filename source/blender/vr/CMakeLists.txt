@@ -66,6 +66,7 @@ set(SRC
     intern/vr_oculus.cpp
 
     vr_build.h
+    vr_ghost_types.h
     vr_api.h
     vr_vr.h
     

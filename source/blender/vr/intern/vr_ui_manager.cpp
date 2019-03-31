@@ -89,17 +89,74 @@ void VR_UI_Manager::setProjectionMatrix(unsigned int side, const float matrix[4]
 
 void VR_UI_Manager::processUserInput()
 {
-
-	computeNavMatrix();
-}
-
-void VR_UI_Manager::computeNavMatrix()
-{
 	// Early return
 	if (!m_currentState[VR_RIGHT].mEnabled && !m_currentState[VR_LEFT].mEnabled) {
 		return;
 	}
 
+	computeGhostEvents();
+	computeNavMatrix();
+}
+
+void VR_UI_Manager::computeGhostEvents()
+{
+	float rayOrigin[3], rayDir[3], hitResult[3];
+	/*
+	Compute intersection in Navigation scaled space.
+	If we make UI in non scaled space we have to change the space of intersection
+	*/
+	m_hitResult[VR_LEFT].m_hit = false;
+
+	computeTouchControllerRay(VR_RIGHT, VR_Space::VR_NAV_SCALED_SPACE, rayOrigin, rayDir);
+	bool hit = m_mainMenu->intersectRay(rayOrigin, rayDir, hitResult);
+	m_hitResult[VR_RIGHT].m_hit = hit;
+	if (hit) {
+		m_hitResult[VR_RIGHT].m_uv[0] = hitResult[0];
+		m_hitResult[VR_RIGHT].m_uv[1] = hitResult[1];
+		m_hitResult[VR_RIGHT].m_dist = hitResult[2];
+	}
+
+	if (m_hitResult[VR_RIGHT].m_hit) {
+		// Event Cursor
+		VR_UI_HitResult &hitResult = m_hitResult[VR_RIGHT];
+		pushGhostEvent(new VR_GHOST_EventCursor(VR_GHOST_kEventCursorMove, hitResult.m_uv[0] * m_bWindow->sizex, (1.0f - hitResult.m_uv[1]) * m_bWindow->sizey));
+
+		bool currLeftButtonDown = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_RINDEX_TRIGGER;
+		bool prevLeftButtonDown = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_RINDEX_TRIGGER;
+		bool currMidButtonDown = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_B;
+		bool prevMidButtonDown = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_B;
+		bool currRightButtonDown = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_A;
+		bool prevRightButtonDown = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_A;
+		
+		// Left Mouse Button
+		if (currLeftButtonDown && !prevLeftButtonDown) { // Left Button Down
+			pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonDown, VR_GHOST_kButtonMaskLeft));
+		}
+		else if (!currLeftButtonDown&& prevLeftButtonDown) { // Left Button Up
+			pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonUp, VR_GHOST_kButtonMaskLeft));
+		}
+
+		// Middle Mouse Button
+		if (currMidButtonDown && !prevMidButtonDown) { // Middle Button Down
+			pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonDown, VR_GHOST_kButtonMaskMiddle));
+		}
+		else if (!currMidButtonDown && prevMidButtonDown) { // Middle Button Up
+			pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonUp, VR_GHOST_kButtonMaskMiddle));
+		}
+
+		// Right Mouse Button
+		if (currRightButtonDown && !prevRightButtonDown) { // Right Button Down
+			pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonDown, VR_GHOST_kButtonMaskRight));
+		}
+		else if (!currRightButtonDown && prevRightButtonDown) { // Right Button Up
+			pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonUp, VR_GHOST_kButtonMaskRight));
+		}
+	}
+
+}
+
+void VR_UI_Manager::computeNavMatrix()
+{
 	bool prevRHandTrigger = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
 	bool currRHandTrigger = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
 	bool prevLHandTrigger = m_previousState[VR_LEFT].mButtons & VR_BUTTON_LHAND_TRIGGER;
@@ -297,23 +354,14 @@ void VR_UI_Manager::drawTouchControllers()
 		GPU_batch_draw_range_ex(batch, 0, 0, false);
 		GPU_batch_program_use_end(batch);
 
-		float rayOrigin[3], rayDir[3], hitResult[3];
-		/* 
-		Compute intersection in Navigation scaled space.
-		If we make UI in non scaled space we have to change the space of intersection
-		*/
-		computeTouchControllerRay(touchSide, VR_Space::VR_NAV_SCALED_SPACE, rayOrigin, rayDir);
-		bool hit = m_mainMenu->intersectRay(rayOrigin, rayDir, hitResult);
-
 		float *rayColor = touchColor[touchSide];
 		float rayLen = VR_RAY_MAX_LEN;
-		if (hit) {
-			//print_v3("Hit: ", hitResult);
+		if (m_hitResult[touchSide].m_hit) {
 			rayColor = hitColor;
-			rayLen = hitResult[2];
-			pushGhostEvent(new VR_GHOST_EventCursor(VR_GHOST_kEventCursorMove, hitResult[0] * m_bWindow->sizex, (1.0f - hitResult[1]) * m_bWindow->sizey));
+			rayLen = m_hitResult[touchSide].m_dist;
 		}
 		// Draw ray in VR space
+		float rayOrigin[3], rayDir[3];
 		computeTouchControllerRay(touchSide, VR_Space::VR_VR_SPACE, rayOrigin, rayDir);
 		drawRay(rayOrigin, rayDir, rayLen, rayColor);
 	}

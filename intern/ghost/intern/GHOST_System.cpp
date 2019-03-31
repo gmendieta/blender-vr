@@ -219,9 +219,6 @@ void GHOST_System::dispatchEvents()
 		m_ndofManager->sendMotionEvent();
 	}
 #endif
-	if (m_vrManager) {
-		m_vrManager->processEvents();
-	}
 
 	if (m_eventManager) {
 		m_eventManager->dispatchEvents();

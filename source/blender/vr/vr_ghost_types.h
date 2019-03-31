@@ -2,14 +2,22 @@
 #ifndef __VR_GHOST_TYPES_H__
 #define __VR_GHOST_TYPES_H__
 
+typedef enum _VR_GHOST_TButtonMask {
+	VR_GHOST_kButtonMaskLeft = 0,
+	VR_GHOST_kButtonMaskMiddle,
+	VR_GHOST_kButtonMaskRight,
+	VR_GHOST_kButtonNumMasks
+} VR_GHOST_TButtonMask;
+
 typedef enum _VR_GHOST_TEventType {
 	VR_GHOST_kEventCursorMove,     /// Mouse move event
 	VR_GHOST_kEventButtonDown,     /// Mouse button event
 	VR_GHOST_kEventButtonUp,       /// Mouse button event
-	VR_GHOST_kEventWheel,          /// Mouse wheel event
+	//VR_GHOST_kEventWheel,          /// Mouse wheel event
 
-	VR_GHOST_kEventKeyDown,
-	VR_GHOST_kEventKeyUp,
+	//VR_GHOST_kEventKeyDown,
+	//VR_GHOST_kEventKeyUp,
+	//VR_THOST_kEventNumTypes
 } VR_GHOST_TEventType;
 
 // This class stores VR events that will be injected into GHOST_WindowManager
@@ -39,8 +47,8 @@ protected:
 struct VR_GHOST_EventCursor: public VR_GHOST_Event
 {
 public:
-	VR_GHOST_EventCursor(VR_GHOST_TEventType type, int x, int y)
-		:VR_GHOST_Event(type),
+	VR_GHOST_EventCursor(VR_GHOST_TEventType type, int x, int y):
+		VR_GHOST_Event(type),
 		m_x(x),
 		m_y(y)
 	{
@@ -59,6 +67,23 @@ public:
 protected:
 	int m_x;
 	int m_y;
+};
+
+struct VR_GHOST_EventButton : public VR_GHOST_Event
+{
+public:
+	VR_GHOST_EventButton(VR_GHOST_TEventType type, VR_GHOST_TButtonMask buttonMask) :
+		VR_GHOST_Event(type),
+		m_buttonMask(buttonMask)
+	{
+	}
+
+	VR_GHOST_TButtonMask getButtonMask() const
+	{
+		return m_buttonMask;
+	}
+protected:
+	VR_GHOST_TButtonMask m_buttonMask;
 };
 
 #endif

@@ -25,6 +25,7 @@ GHOST_VRManagerWin32::GHOST_VRManagerWin32(GHOST_System &sys)
 
 bool GHOST_VRManagerWin32::processEvents()
 {
+	bool hasEventHandled = false;
 	// We should only inject events in our GHOST window
 	GHOST_IWindow *window = m_system.getWindowManager()->getActiveWindow();
 	GHOST_IWindow *vr_ghost_win = (GHOST_IWindow*)vr_ghost_window_get();
@@ -36,18 +37,30 @@ bool GHOST_VRManagerWin32::processEvents()
 		GHOST_Event *event = NULL;
 
 		switch (vr_event->getType()) {
-		case VR_GHOST_kEventCursorMove:
-			VR_GHOST_EventCursor * cursorEvent = (VR_GHOST_EventCursor*)vr_event;
-			event = processCursorEvents(cursorEvent);
+			case VR_GHOST_kEventCursorMove: {
+				VR_GHOST_EventCursor *eventCursor = (VR_GHOST_EventCursor*)vr_event;
+				event = processCursorEvents(eventCursor);
+				break;
+			}
+			case VR_GHOST_kEventButtonDown: {
+				VR_GHOST_EventButton * eventButton = (VR_GHOST_EventButton*)vr_event;
+				event = processButtonEvents(eventButton);
+				break;
+			}
+			case VR_GHOST_kEventButtonUp: {
+				VR_GHOST_EventButton * eventButton = (VR_GHOST_EventButton*)vr_event;
+				event = processButtonEvents(eventButton);
+				break;
+			}
 		}
-
 		if (event) {
 			m_system.pushEvent(event);
+			hasEventHandled = true;
 		}
 	}
 	vr_ghost_event_clear();
 	
-	return true;
+	return hasEventHandled;
 }
 
 GHOST_EventCursor* GHOST_VRManagerWin32::processCursorEvents(VR_GHOST_EventCursor *event)
@@ -63,9 +76,40 @@ GHOST_EventCursor* GHOST_VRManagerWin32::processCursorEvents(VR_GHOST_EventCurso
 	);
 }
 
-GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButton * event)
+GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButton *event)
 {
-	return NULL;
+	GHOST_WindowWin32 *window = (GHOST_WindowWin32*)m_system.getWindowManager()->getActiveWindow();
+	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
+
+	GHOST_TEventType eventType = GHOST_kEventButtonDown;
+	GHOST_TButtonMask buttonMask = GHOST_kButtonMaskLeft;
+
+	switch (event->getButtonMask()) {
+		case VR_GHOST_kButtonMaskLeft:
+			buttonMask = GHOST_kButtonMaskLeft;
+			break;
+		case VR_GHOST_kButtonMaskMiddle:
+			buttonMask = GHOST_kButtonMaskMiddle;
+			break;
+		case VR_GHOST_kButtonMaskRight:
+			buttonMask = GHOST_kButtonMaskRight;
+			break;
+	}
+
+	switch (event->getType()) {
+		case VR_GHOST_kEventButtonDown:
+			eventType = GHOST_kEventButtonDown;
+			break;
+		case VR_GHOST_kEventButtonUp:
+			eventType = GHOST_kEventButtonUp;
+			break;
+	}
+	
+	return new GHOST_EventButton(system->getMilliSeconds(),
+		eventType,
+		window,
+		buttonMask
+	);
 }
 
 GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey *event)
