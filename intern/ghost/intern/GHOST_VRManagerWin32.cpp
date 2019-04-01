@@ -73,20 +73,23 @@ bool GHOST_VRManagerWin32::processEvents()
 	return hasEventHandled;
 }
 
-GHOST_EventCursor* GHOST_VRManagerWin32::processCursorEvents(VR_GHOST_EventCursor *event)
+GHOST_EventCursor* GHOST_VRManagerWin32::processCursorEvents(VR_GHOST_EventCursor *vr_event)
 {
 	GHOST_WindowWin32 *window = (GHOST_WindowWin32*) m_system.getWindowManager()->getActiveWindow();
 	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
 
+	int screen_x, screen_y;
+	window->clientToScreen(vr_event->getX(), vr_event->getY(), screen_x, screen_y);
+
 	return new GHOST_EventCursor(system->getMilliSeconds(),
 		GHOST_kEventCursorMove,
 		window,
-		event->getX(),
-		event->getY()
+		screen_x,
+		screen_y
 	);
 }
 
-GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButton *event)
+GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButton *vr_event)
 {
 	GHOST_WindowWin32 *window = (GHOST_WindowWin32*)m_system.getWindowManager()->getActiveWindow();
 	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
@@ -94,7 +97,7 @@ GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButt
 	GHOST_TEventType eventType = GHOST_kEventButtonDown;
 	GHOST_TButtonMask buttonMask = GHOST_kButtonMaskLeft;
 
-	switch (event->getButtonMask()) {
+	switch (vr_event->getButtonMask()) {
 		case VR_GHOST_kButtonMaskLeft:
 			buttonMask = GHOST_kButtonMaskLeft;
 			break;
@@ -106,7 +109,7 @@ GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButt
 			break;
 	}
 
-	switch (event->getType()) {
+	switch (vr_event->getType()) {
 		case VR_GHOST_kEventButtonDown:
 			eventType = GHOST_kEventButtonDown;
 			break;
@@ -122,7 +125,7 @@ GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButt
 	);
 }
 
-GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey *event)
+GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey *vr_event)
 {
 	GHOST_WindowWin32 *window = (GHOST_WindowWin32*)m_system.getWindowManager()->getActiveWindow();
 	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
@@ -130,7 +133,7 @@ GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey 
 	GHOST_TEventType eventType = GHOST_kEventKeyDown;
 	GHOST_TKey key = GHOST_kKeyDownArrow;
 
-	switch (event->getType()) {
+	switch (vr_event->getType()) {
 		case VR_GHOST_kEventKeyDown:
 			eventType = GHOST_kEventKeyDown;
 			break;
@@ -139,7 +142,7 @@ GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey 
 			break;
 	}
 
-	switch (event->getKey()) {
+	switch (vr_event->getKey()) {
 		case VR_GHOST_kKeyDownArrow:
 			key = GHOST_kKeyDownArrow;
 			break;
