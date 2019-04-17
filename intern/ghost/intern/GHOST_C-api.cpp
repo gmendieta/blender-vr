@@ -753,6 +753,11 @@ const GHOST_TabletData *GHOST_GetTabletData(GHOST_WindowHandle windowhandle)
 	return ((GHOST_IWindow *)windowhandle)->GetTabletData();
 }
 
+const GHOST_VRData *GHOST_getVRData(GHOST_WindowHandle windowhandle)
+{
+	return ((GHOST_IWindow *)windowhandle)->getVRData();
+}
+
 
 GHOST_TInt32 GHOST_GetWidthRectangle(GHOST_RectangleHandle rectanglehandle)
 {

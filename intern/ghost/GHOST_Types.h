@@ -96,6 +96,14 @@ typedef struct GHOST_TabletData {
 } GHOST_TabletData;
 
 
+typedef struct GHOST_VRData {
+	char valid;
+	float x; /** The x-coordinate. */
+	float y; /** The y-coordinate. */
+	float z; /** The z-coordinate. */
+} GHOST_VRData;
+
+
 typedef enum {
 	GHOST_kNotVisible = 0,
 	GHOST_kPartiallyVisible,

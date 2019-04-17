@@ -25,8 +25,7 @@ static const float VR_RAY_LEN = 0.1f;
 
 VR_UI_Manager::VR_UI_Manager():
 	m_bWindow(NULL),
-	m_isNavigating(false),
-	m_isMovingMenu(false)
+	m_state(VR_UI_State_kNone)
 {
 	// Set identity navigation matrices
 	unit_m4(m_headMatrix);
@@ -36,7 +35,7 @@ VR_UI_Manager::VR_UI_Manager():
 	unit_m4(m_navScaledMatrix);
 	unit_m4(m_navScaledInvMatrix);
 
-	for (int s = 0; s < VR_MAX_SIDES; ++s) {
+	for (int s = 0; s < VR_SIDES_MAX; ++s) {
 		unit_m4(m_touchPrevMatrices[s]);
 		unit_m4(m_touchMatrices[s]);
 		unit_m4(m_eyeMatrix[s]);
@@ -90,23 +89,55 @@ void VR_UI_Manager::setProjectionMatrix(unsigned int side, const float matrix[4]
 void VR_UI_Manager::processUserInput()
 {
 	// Early return
-	if (!m_currentState[VR_RIGHT].mEnabled && !m_currentState[VR_LEFT].mEnabled) {
+	if (!m_currentState[VR_SIDE_RIGHT].mEnabled && !m_currentState[VR_SIDE_LEFT].mEnabled) {
 		return;
 	}
-	
-	computeMenuRayHits();
-	computeMenuMatrix();
-	computeGhostEvents();
-	computeNavMatrix();
+	processMenuRayHits();
+	processMenuMatrix();
+	processMenuGhostEvents();
+	processNavMatrix();
+	processGhostEvents();
+
 
 	// Update navigation matrix
 	m_mainMenu->setNavMatrix(m_navScaledMatrix);
 }
 
-void VR_UI_Manager::computeMenuRayHits()
+VR_Side VR_UI_Manager::getPrimarySide()
+{
+	return VR_SIDE_RIGHT;
+}
+
+VR_Side VR_UI_Manager::getSecondarySide()
+{
+	return VR_SIDE_LEFT;
+}
+
+void VR_UI_Manager::getScreenCoordinates(unsigned int side, float coords[2])
+{
+	float viewProjectionMatrix[4][4];
+	mul_m4_m4m4(viewProjectionMatrix, m_bProjectionMatrix[side], m_bViewMatrix[side]);
+
+	float modelViewProj[4][4];
+	copy_m4_m4(modelViewProj, m_touchMatrices[side]);
+	// Apply navigation to model to make it appear in Eye space
+	mul_m4_m4_pre(modelViewProj, m_navScaledMatrix);
+	mul_m4_m4_pre(modelViewProj, m_viewProjectionMatrix);
+
+	float position[4];
+	copy_v4_v4(position, modelViewProj[3]);
+
+	float w = position[3] > 0.0f ? position[3] : 0.0001f;
+	
+	// This coordinates have to be in the range [0, 1]
+	coords[0] = (position[0] / w) / 2.0f + 0.5f;
+	coords[1] = (position[1] / w) / 2.0f + 0.5f;
+}
+
+void VR_UI_Manager::processMenuRayHits()
 {
 	// Early return
-	if (m_isNavigating || m_isMovingMenu) {
+	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kMenu) {
 		return;
 	}
 
@@ -115,7 +146,7 @@ void VR_UI_Manager::computeMenuRayHits()
 	Compute intersection in Navigation scaled space.
 	If we make UI in non scaled space we have to change the space of intersection
 	*/
-	for (int side = 0; side < VR_MAX_SIDES; ++side) {
+	for (int side = 0; side < VR_SIDES_MAX; ++side) {
 		// Clear Hit
 		m_hitResult[side].clear();
 		computeTouchControllerRay(side, VR_Space::VR_NAV_SCALED_SPACE, rayOrigin, rayDir);
@@ -130,21 +161,24 @@ void VR_UI_Manager::computeMenuRayHits()
 	}
 }
 
-void VR_UI_Manager::computeMenuMatrix()
+void VR_UI_Manager::processMenuMatrix()
 {
 	// Early return
-	if (m_isNavigating || !m_hitResult[VR_RIGHT].m_hit) {
+	if ((m_state != VR_UI_State_kNone && m_state != VR_UI_State_kMenu)) {
 		return;
 	}
-	bool prevRHandTrigger = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
-	bool currRHandTrigger = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
+	bool prevRHandTrigger = m_previousState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
+	bool currRHandTrigger = m_currentState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
 
-	m_isMovingMenu = currRHandTrigger;
-	if (m_isMovingMenu) {
-		VR_UI_Window *menu = m_hitResult[VR_RIGHT].m_window;
+	if (!currRHandTrigger || !m_hitResult[VR_SIDE_RIGHT].m_hit) {
+		m_state = VR_UI_State_kNone;
+	}
+	else {
+		m_state = VR_UI_State_kMenu;
+		VR_UI_Window *menu = m_hitResult[VR_SIDE_RIGHT].m_window;
 		if (!prevRHandTrigger) {
 			// Store touch controller start matrix
-			vr_oculus_blender_matrix_build(m_currentState[VR_RIGHT].mRotation, m_currentState[VR_RIGHT].mPosition, m_touchPrevMatrices[VR_RIGHT]);
+			vr_oculus_blender_matrix_build(m_currentState[VR_SIDE_RIGHT].mRotation, m_currentState[VR_SIDE_RIGHT].mPosition, m_touchPrevMatrices[VR_SIDE_RIGHT]);
 			menu->getMatrix(m_menuPrevMatrix);
 		}
 
@@ -154,14 +188,14 @@ void VR_UI_Manager::computeMenuMatrix()
 		float deltaMatrix[4][4];
 		float menuMatrix[4][4];
 
-		if (m_hitResult[VR_RIGHT].m_hit) {
-			VR_UI_Window *menu = m_hitResult[VR_RIGHT].m_window;
+		if (m_hitResult[VR_SIDE_RIGHT].m_hit) {
+			VR_UI_Window *menu = m_hitResult[VR_SIDE_RIGHT].m_window;
 			// Copy already calculated matrix
-			copy_m4_m4(navMatrix, m_touchMatrices[VR_RIGHT]);
+			copy_m4_m4(navMatrix, m_touchMatrices[VR_SIDE_RIGHT]);
 			// Invert the current controller matrix in order to achieve inverse transformation
 			invert_m4_m4(navInvMatrix, navMatrix);
 			// Get delta
-			mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_RIGHT], navInvMatrix);
+			mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_SIDE_RIGHT], navInvMatrix);
 
 			// Apply delta to menu matrix
 			invert_m4(deltaMatrix);
@@ -171,24 +205,33 @@ void VR_UI_Manager::computeMenuMatrix()
 	}
 }
 
-void VR_UI_Manager::computeGhostEvents()
+void VR_UI_Manager::processMenuGhostEvents()
 {
 	// Early return
-	if (m_isNavigating || m_isMovingMenu) {
+	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kMenu) {
 		return;
 	}
 
-	if (m_hitResult[VR_RIGHT].m_hit) {
+	VR_Side sidePrimary = getPrimarySide();
+	if (!m_hitResult[sidePrimary].m_hit) {
+		m_state = VR_UI_State_kNone;
+	}
+	if (m_hitResult[sidePrimary].m_hit) {
+		m_state = VR_UI_State_kMenu;
 		// Event Cursor
-		VR_UI_HitResult &hitResult = m_hitResult[VR_RIGHT];
-		pushGhostEvent(new VR_GHOST_EventCursor(VR_GHOST_kEventCursorMove, hitResult.m_uv[0] * m_bWindow->sizex, (1.0f - hitResult.m_uv[1]) * m_bWindow->sizey));
+		VR_UI_HitResult &hitResult = m_hitResult[sidePrimary];
+		// The y coordinate have to be inverted for GHOST because plane top has a uv of 1
+		pushGhostEvent(new VR_GHOST_EventCursor(
+			VR_GHOST_kEventCursorMove,
+			hitResult.m_uv[0] * m_bWindow->sizex,
+			(1.0f - hitResult.m_uv[1]) * m_bWindow->sizey));
 
-		bool currLeftButtonDown = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_RINDEX_TRIGGER;
-		bool prevLeftButtonDown = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_RINDEX_TRIGGER;
-		bool currMidButtonDown = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_B;
-		bool prevMidButtonDown = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_B;
-		bool currRightButtonDown = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_A;
-		bool prevRightButtonDown = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_A;
+		bool currLeftButtonDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
+		bool prevLeftButtonDown = m_previousState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
+		bool currMidButtonDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_B;
+		bool prevMidButtonDown = m_previousState[sidePrimary].mButtons & VR_BUTTON_B;
+		bool currRightButtonDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_A;
+		bool prevRightButtonDown = m_previousState[sidePrimary].mButtons & VR_BUTTON_A;
 		
 		// Left Mouse Button
 		if (currLeftButtonDown && !prevLeftButtonDown) { // Left Button Down
@@ -214,14 +257,14 @@ void VR_UI_Manager::computeGhostEvents()
 			pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonUp, VR_GHOST_kButtonMaskRight));
 		}
 
-		bool currThumbstickSwipeDown = m_currentState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_DOWN;
-		bool prevThumbstickSwipeDown = m_previousState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_DOWN;
-		bool currThumbstickSwipeUp = m_currentState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_UP;
-		bool prevThumbstickSwipeUp = m_previousState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_UP;
-		bool currThumbstickSwipeLeft = m_currentState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
-		bool prevThumbstickSwipeLeft = m_previousState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
-		bool currThumbstickSwipeRight = m_currentState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_RIGHT;
-		bool prevThumbstickSwipeRight = m_previousState[VR_RIGHT].mButtons & VR_THUMBSTICK_SWIPE_RIGHT;
+		bool currThumbstickSwipeDown = m_currentState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_DOWN;
+		bool prevThumbstickSwipeDown = m_previousState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_DOWN;
+		bool currThumbstickSwipeUp = m_currentState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_UP;
+		bool prevThumbstickSwipeUp = m_previousState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_UP;
+		bool currThumbstickSwipeLeft = m_currentState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
+		bool prevThumbstickSwipeLeft = m_previousState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
+		bool currThumbstickSwipeRight = m_currentState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_RIGHT;
+		bool prevThumbstickSwipeRight = m_previousState[sidePrimary].mButtons & VR_THUMBSTICK_SWIPE_RIGHT;
 
 		// Arrow Down
 		if (currThumbstickSwipeDown && !prevThumbstickSwipeDown) {
@@ -257,29 +300,129 @@ void VR_UI_Manager::computeGhostEvents()
 	}
 }
 
-void VR_UI_Manager::computeNavMatrix()
+void VR_UI_Manager::processGhostEvents()
 {
 	// Early return
-	if (m_isMovingMenu) {
+	if (m_state != VR_UI_State_kNone) {
 		return;
 	}
 
-	bool prevRHandTrigger = m_previousState[VR_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
-	bool currRHandTrigger = m_currentState[VR_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
-	bool prevLHandTrigger = m_previousState[VR_LEFT].mButtons & VR_BUTTON_LHAND_TRIGGER;
-	bool currLHandTrigger = m_currentState[VR_LEFT].mButtons & VR_BUTTON_LHAND_TRIGGER;
+	VR_Side sidePrimary = getPrimarySide();
+	VR_Side sideSecondary = getSecondarySide();
 
-	m_isNavigating = currRHandTrigger || currLHandTrigger;
+	if (!m_currentState[sidePrimary].mEnabled && !m_currentState[sideSecondary].mEnabled) {
+		return;
+	}
+
+	bool currIndexTriggerDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
+	bool prevIndexTriggerDown = m_previousState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
+	bool currButtonBDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_B;
+	bool prevButtonBDown = m_previousState[sidePrimary].mButtons & VR_BUTTON_B;
+	bool currButtonADown = m_currentState[sidePrimary].mButtons & VR_BUTTON_A;
+	bool prevButtonADown = m_previousState[sidePrimary].mButtons & VR_BUTTON_A;
+
+	// Left Mouse Button
+	if (currIndexTriggerDown && !prevIndexTriggerDown) { // Left Button Down
+		pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonDown, VR_GHOST_kButtonMaskLeft));
+	}
+	else if (!currIndexTriggerDown&& prevIndexTriggerDown) { // Left Button Up
+		pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonUp, VR_GHOST_kButtonMaskLeft));
+	}
+
+	// Middle Mouse Button
+	if (currButtonBDown && !prevButtonBDown) { // Middle Button Down
+		pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonDown, VR_GHOST_kButtonMaskMiddle));
+	}
+	else if (!currButtonBDown && prevButtonBDown) { // Middle Button Up
+		pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonUp, VR_GHOST_kButtonMaskMiddle));
+	}
+
+	// Right Mouse Button
+	if (currButtonADown && !prevButtonADown) { // Right Button Down
+		pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonDown, VR_GHOST_kButtonMaskRight));
+	}
+	else if (!currButtonADown && prevButtonADown) { // Right Button Up
+		pushGhostEvent(new VR_GHOST_EventButton(VR_GHOST_kEventButtonUp, VR_GHOST_kButtonMaskRight));
+	}
+
+	// Left Hand
+	currIndexTriggerDown = m_currentState[sideSecondary].mButtons & VR_BUTTON_LINDEX_TRIGGER;
+	prevIndexTriggerDown = m_previousState[sideSecondary].mButtons & VR_BUTTON_LINDEX_TRIGGER;
+	bool currButtonYDown = m_currentState[sideSecondary].mButtons & VR_BUTTON_Y;
+	bool prevButtonYDown = m_previousState[sideSecondary].mButtons & VR_BUTTON_Y;
+	bool currButtonXDown = m_currentState[sideSecondary].mButtons & VR_BUTTON_X;
+	bool prevButtonXDown = m_previousState[sideSecondary].mButtons & VR_BUTTON_X;
+
+	// Shift (Left Index Trigger)
+	if (currIndexTriggerDown && !prevIndexTriggerDown) { // Left Shift Down
+		pushGhostEvent(new VR_GHOST_EventKey(VR_GHOST_kEventKeyDown, VR_GHOST_kKeyLeftShift));
+	}
+	else if (!currIndexTriggerDown&& prevIndexTriggerDown) { // Left Shift Up
+		pushGhostEvent(new VR_GHOST_EventKey(VR_GHOST_kEventKeyUp, VR_GHOST_kKeyLeftShift));
+	}
+
+	// Control
+	if (currButtonYDown && !prevButtonYDown) { // Left Control Down
+		pushGhostEvent(new VR_GHOST_EventKey(VR_GHOST_kEventKeyDown, VR_GHOST_kKeyLeftControl));
+	}
+	else if (!currButtonYDown && prevButtonYDown) { // Left Control Up
+		pushGhostEvent(new VR_GHOST_EventKey(VR_GHOST_kEventKeyUp, VR_GHOST_kKeyLeftControl));
+	}
+
+	// Alt
+	if (currButtonXDown && !prevButtonXDown) { // Left Alt Down
+		pushGhostEvent(new VR_GHOST_EventKey(VR_GHOST_kEventKeyDown, VR_GHOST_kKeyLeftAlt));
+	}
+	else if (!currButtonXDown && prevButtonXDown) { // Left Alt Up
+		pushGhostEvent(new VR_GHOST_EventKey(VR_GHOST_kEventKeyUp, VR_GHOST_kKeyLeftAlt));
+	}
+
+	// Event Cursor
+	// At this point the EventCursor is going to be always 3d. Sometimes it will be 2d, depending on projection
+	float coords2d[2];
+	float coords3d[3];	
+	// EventVRMotion
+	mul_v3_m4v3(coords3d, m_navScaledMatrix, m_touchMatrices[sidePrimary][3]);
+	pushGhostEvent(new VR_GHOST_EventVRMotion(VR_GHOST_kEventVRMotion, coords3d[0], coords3d[1], coords3d[2]));
+
+	// EventCursor
+	getScreenCoordinates(sidePrimary, coords2d);
+	if (coords2d[0] >= 0.0f && coords2d[0] <= 1.0f && coords2d[1] >= 0.0f && coords2d[1] <= 1.0f) {
+		// We need to flip y coordinate and calculate inverse offsets because Blender measures from bottom to top and GHOST from top to bottom
+		float ymin = m_bWindow->sizey - m_bARegion->winrct.ymax;
+		coords2d[0] = m_bARegion->winrct.xmin + coords2d[0] * m_bARegion->winx;
+		coords2d[1] = ymin + (1.0f - coords2d[1]) * m_bARegion->winy;
+		pushGhostEvent(new VR_GHOST_EventCursor(VR_GHOST_kEventCursorMove, coords2d[0], coords2d[1]));
+	}
+}
+
+void VR_UI_Manager::processNavMatrix()
+{
+	// Early return
+	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kNavigate) {
+		return;
+	}
+
+	bool prevRHandTrigger = m_previousState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
+	bool currRHandTrigger = m_currentState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
+	bool prevLHandTrigger = m_previousState[VR_SIDE_LEFT].mButtons & VR_BUTTON_LHAND_TRIGGER;
+	bool currLHandTrigger = m_currentState[VR_SIDE_LEFT].mButtons & VR_BUTTON_LHAND_TRIGGER;
+
+	bool isNav = currRHandTrigger || currLHandTrigger;
 	bool isNavTwoHands = currRHandTrigger && currLHandTrigger;
 
-	if (m_isNavigating) {
+	if (!isNav) {
+		m_state = VR_UI_State_kNone;
+	}
+	else {
+		m_state = VR_UI_State_kNavigate;
 		if (!prevRHandTrigger) {
 			// Store touch controller start matrix
-			vr_oculus_blender_matrix_build(m_currentState[VR_RIGHT].mRotation, m_currentState[VR_RIGHT].mPosition, m_touchPrevMatrices[VR_RIGHT]);
+			vr_oculus_blender_matrix_build(m_currentState[VR_SIDE_RIGHT].mRotation, m_currentState[VR_SIDE_RIGHT].mPosition, m_touchPrevMatrices[VR_SIDE_RIGHT]);
 		}
 		if (!prevLHandTrigger) {
 			// Store touch controller start matrix
-			vr_oculus_blender_matrix_build(m_currentState[VR_LEFT].mRotation, m_currentState[VR_LEFT].mPosition, m_touchPrevMatrices[VR_LEFT]);
+			vr_oculus_blender_matrix_build(m_currentState[VR_SIDE_LEFT].mRotation, m_currentState[VR_SIDE_LEFT].mPosition, m_touchPrevMatrices[VR_SIDE_LEFT]);
 		}
 
 		////// Navigation temporal matrices ///////
@@ -289,12 +432,12 @@ void VR_UI_Manager::computeNavMatrix()
 
 		// When navigating two hands, we want to perform transformation based on two hands, mimicking Oculus Quill
 		if (isNavTwoHands) {
-			float touchRPrevPos[3] = { m_touchPrevMatrices[VR_RIGHT][3][0], m_touchPrevMatrices[VR_RIGHT][3][1] , m_touchPrevMatrices[VR_RIGHT][3][2] };
-			float touchLPrevPos[3] = { m_touchPrevMatrices[VR_LEFT][3][0], m_touchPrevMatrices[VR_LEFT][3][1] , m_touchPrevMatrices[VR_LEFT][3][2] };
+			float touchRPrevPos[3] = { m_touchPrevMatrices[VR_SIDE_RIGHT][3][0], m_touchPrevMatrices[VR_SIDE_RIGHT][3][1] , m_touchPrevMatrices[VR_SIDE_RIGHT][3][2] };
+			float touchLPrevPos[3] = { m_touchPrevMatrices[VR_SIDE_LEFT][3][0], m_touchPrevMatrices[VR_SIDE_LEFT][3][1] , m_touchPrevMatrices[VR_SIDE_LEFT][3][2] };
 			float prevDist = len_v3v3(touchRPrevPos, touchLPrevPos);
 
-			float touchRPos[3] = { m_touchMatrices[VR_RIGHT][3][0], m_touchMatrices[VR_RIGHT][3][1] , m_touchMatrices[VR_RIGHT][3][2] };
-			float touchLPos[3] = { m_touchMatrices[VR_LEFT][3][0], m_touchMatrices[VR_LEFT][3][1] , m_touchMatrices[VR_LEFT][3][2] };
+			float touchRPos[3] = { m_touchMatrices[VR_SIDE_RIGHT][3][0], m_touchMatrices[VR_SIDE_RIGHT][3][1] , m_touchMatrices[VR_SIDE_RIGHT][3][2] };
+			float touchLPos[3] = { m_touchMatrices[VR_SIDE_LEFT][3][0], m_touchMatrices[VR_SIDE_LEFT][3][1] , m_touchMatrices[VR_SIDE_LEFT][3][2] };
 			float dist = len_v3v3(touchRPos, touchLPos);
 			float scalePivot[3];
 			interp_v3_v3v3(scalePivot, touchRPos, touchLPos, 0.5f);
@@ -312,21 +455,21 @@ void VR_UI_Manager::computeNavMatrix()
 		// Navigation with one hand
 		else {
 			// Copy already calculated matrix
-			copy_m4_m4(navMatrix, m_touchMatrices[VR_RIGHT]);
+			copy_m4_m4(navMatrix, m_touchMatrices[VR_SIDE_RIGHT]);
 			// Invert the current controller matrix in order to achieve inverse transformation
 			invert_m4_m4(navInvMatrix, navMatrix);
 			// Get delta
-			mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_RIGHT], navInvMatrix);
+			mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_SIDE_RIGHT], navInvMatrix);
 			// Apply delta to navigation space
 			mul_m4_m4_post(m_navMatrix, deltaMatrix);
 			mul_m4_m4_post(m_navScaledMatrix, deltaMatrix);
 
 			// Copy already calculated matrix
-			copy_m4_m4(navMatrix, m_touchMatrices[VR_LEFT]);
+			copy_m4_m4(navMatrix, m_touchMatrices[VR_SIDE_LEFT]);
 			// Invert the current controller matrix in order to achieve inverse transformation
 			invert_m4_m4(navInvMatrix, navMatrix);
 			// Get delta
-			mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_LEFT], navInvMatrix);
+			mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_SIDE_LEFT], navInvMatrix);
 			// Apply delta to navigation space
 			mul_m4_m4_post(m_navMatrix, deltaMatrix);
 			mul_m4_m4_post(m_navScaledMatrix, deltaMatrix);
@@ -337,8 +480,8 @@ void VR_UI_Manager::computeNavMatrix()
 		invert_m4_m4(m_navScaledInvMatrix, m_navScaledMatrix);
 
 		// Store current navigation for next iteration
-		copy_m4_m4(m_touchPrevMatrices[VR_RIGHT], m_touchMatrices[VR_RIGHT]);
-		copy_m4_m4(m_touchPrevMatrices[VR_LEFT], m_touchMatrices[VR_LEFT]);
+		copy_m4_m4(m_touchPrevMatrices[VR_SIDE_RIGHT], m_touchMatrices[VR_SIDE_RIGHT]);
+		copy_m4_m4(m_touchPrevMatrices[VR_SIDE_LEFT], m_touchMatrices[VR_SIDE_LEFT]);
 	}
 }
 
@@ -379,6 +522,11 @@ float VR_UI_Manager::getNavScale()
 void VR_UI_Manager::setBlenderWindow(struct wmWindow *bWindow)
 {
 	m_bWindow = bWindow;
+}
+
+void VR_UI_Manager::setBlenderARegion(struct ARegion *bARegion)
+{
+	m_bARegion = bARegion;
 }
 
 void VR_UI_Manager::updateUiTextures()
@@ -444,7 +592,7 @@ void VR_UI_Manager::drawTouchControllers()
 	GPUShader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
 	GPU_batch_program_set_shader(batch, shader);
 
-	for (int touchSide = 0; touchSide < VR_MAX_SIDES; ++touchSide) {
+	for (int touchSide = 0; touchSide < VR_SIDES_MAX; ++touchSide) {
 		// Build ModelViewProjection matrix
 		copy_m4_m4(modelViewProj, m_touchMatrices[touchSide]);
 		mul_m4_m4_pre(modelViewProj, modelScale);

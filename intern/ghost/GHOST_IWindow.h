@@ -242,6 +242,11 @@ public:
 	 */
 	virtual const GHOST_TabletData *GetTabletData() = 0;
 
+	/**
+	 * Returns the VR data
+	 */
+	virtual const GHOST_VRData *getVRData() = 0;
+
 	/***************************************************************************************
 	 * Progress bar functionality
 	 ***************************************************************************************/

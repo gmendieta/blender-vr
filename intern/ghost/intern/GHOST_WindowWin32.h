@@ -316,6 +316,8 @@ public:
 		return &m_tabletData;
 	}
 
+	const GHOST_VRData* getVRData() override;
+
 	void processWin32PointerEvent(WPARAM wParam);
 	void processWin32TabletActivateEvent(WORD state);
 	void processWin32TabletInitEvent();

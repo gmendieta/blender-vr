@@ -482,6 +482,9 @@ typedef struct wmEvent {
 	/* tablet info, only use when the tablet is active */
 	const struct wmTabletData *tablet_data;
 
+	/* vr info, only used when vr is active */
+	const struct wmVRData *vr_data;
+
 	/* custom data */
 	short custom;		/* custom data type, stylus, 6dof, see wm_event_types.h */
 	short customdatafree;
@@ -533,6 +536,10 @@ typedef struct wmNDOFMotionData {
 	wmProgress progress; /* is this the first event, the last, or one of many in between? */
 } wmNDOFMotionData;
 #endif /* WITH_INPUT_NDOF */
+
+typedef struct wmVRData {
+	float tvec[3]; /* translation */
+} wmVRData;
 
 typedef enum {  /* Timer flags */
 	WM_TIMER_NO_FREE_CUSTOM_DATA  = 1 << 0,  /* Do not attempt to free customdata pointer even if non-NULL. */

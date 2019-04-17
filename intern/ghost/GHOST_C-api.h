@@ -748,6 +748,13 @@ extern void GHOST_SetTabletAPI(GHOST_SystemHandle systemhandle, GHOST_TTabletAPI
 extern const GHOST_TabletData *GHOST_GetTabletData(GHOST_WindowHandle windowhandle);
 
 /**
+ * Returns the VR data
+ * \param windowandle The handle to the window
+ * \return Status of VR
+ */
+extern const GHOST_VRData *GHOST_getVRData(GHOST_WindowHandle windowhandle);
+
+/**
  * Access to rectangle width.
  * \param rectanglehandle The handle to the rectangle
  * \return width of the rectangle

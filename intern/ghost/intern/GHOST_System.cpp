@@ -308,6 +308,13 @@ void GHOST_System::setNDOFDeadZone(float deadzone)
 }
 #endif
 
+const GHOST_VRData* GHOST_System::getVRData()
+{
+	if (this->m_vrManager) {
+		return m_vrManager->getVRData();
+	}
+}
+
 GHOST_TSuccess GHOST_System::init()
 {
 	m_timerManager = new GHOST_TimerManager();

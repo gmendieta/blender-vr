@@ -181,36 +181,36 @@ void VR_Oculus::beginFrame()
 	/////////////////////////////////////
 
 	// Just modify the availability state
-	mInfo.mController[VR_LEFT].mEnabled = false;
-	mInfo.mController[VR_RIGHT].mEnabled = false;
+	mInfo.mController[VR_SIDE_LEFT].mEnabled = false;
+	mInfo.mController[VR_SIDE_RIGHT].mEnabled = false;
 	
 	if (hmdState.HandStatusFlags[ovrHand_Left] & ovrStatus_PositionTracked)
 	{
-		mInfo.mController[VR_LEFT].mEnabled = true;
+		mInfo.mController[VR_SIDE_LEFT].mEnabled = true;
 		// Position
-		mInfo.mController[VR_LEFT].mPosition[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.x;
-		mInfo.mController[VR_LEFT].mPosition[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.y;
-		mInfo.mController[VR_LEFT].mPosition[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.z;
+		mInfo.mController[VR_SIDE_LEFT].mPosition[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.x;
+		mInfo.mController[VR_SIDE_LEFT].mPosition[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.y;
+		mInfo.mController[VR_SIDE_LEFT].mPosition[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Position.z;
 		// Orientation
-		mInfo.mController[VR_LEFT].mRotation[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.x;
-		mInfo.mController[VR_LEFT].mRotation[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.y;
-		mInfo.mController[VR_LEFT].mRotation[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.z;
-		mInfo.mController[VR_LEFT].mRotation[3] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.w;
+		mInfo.mController[VR_SIDE_LEFT].mRotation[0] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.x;
+		mInfo.mController[VR_SIDE_LEFT].mRotation[1] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.y;
+		mInfo.mController[VR_SIDE_LEFT].mRotation[2] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.z;
+		mInfo.mController[VR_SIDE_LEFT].mRotation[3] = hmdState.HandPoses[ovrHand_Left].ThePose.Orientation.w;
 
 		ovrInputState inputState;
 		ovr_GetInputState(mHmd, ovrControllerType_LTouch, &inputState);
 
 		// Thumb Stick Movement
 		ovrVector2f &thumbStickMovement = inputState.Thumbstick[ovrHand_Left];
-		mInfo.mController[VR_LEFT].mThumbstick[0] = thumbStickMovement.x;
-		mInfo.mController[VR_LEFT].mThumbstick[1] = thumbStickMovement.y;
+		mInfo.mController[VR_SIDE_LEFT].mThumbstick[0] = thumbStickMovement.x;
+		mInfo.mController[VR_SIDE_LEFT].mThumbstick[1] = thumbStickMovement.y;
 
 		// Triggers
-		mInfo.mController[VR_LEFT].mIndexTrigger = inputState.IndexTrigger[ovrHand_Left];
-		mInfo.mController[VR_LEFT].mHandTrigger = inputState.HandTrigger[ovrHand_Left];
+		mInfo.mController[VR_SIDE_LEFT].mIndexTrigger = inputState.IndexTrigger[ovrHand_Left];
+		mInfo.mController[VR_SIDE_LEFT].mHandTrigger = inputState.HandTrigger[ovrHand_Left];
 
 		// Buttons
-		uint64_t &buttons = mInfo.mController[VR_LEFT].mButtons;
+		uint64_t &buttons = mInfo.mController[VR_SIDE_LEFT].mButtons;
 		buttons = 0;
 		if (inputState.Buttons & ovrTouch_X)
 			buttons |= VR_BUTTON_X;
@@ -248,31 +248,31 @@ void VR_Oculus::beginFrame()
 	}
 	if (hmdState.HandStatusFlags[ovrHand_Right] & ovrStatus_PositionTracked)
 	{
-		mInfo.mController[VR_RIGHT].mEnabled = true;
+		mInfo.mController[VR_SIDE_RIGHT].mEnabled = true;
 		// Position
-		mInfo.mController[VR_RIGHT].mPosition[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.x;
-		mInfo.mController[VR_RIGHT].mPosition[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.y;
-		mInfo.mController[VR_RIGHT].mPosition[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.z;
+		mInfo.mController[VR_SIDE_RIGHT].mPosition[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.x;
+		mInfo.mController[VR_SIDE_RIGHT].mPosition[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.y;
+		mInfo.mController[VR_SIDE_RIGHT].mPosition[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Position.z;
 		// Orientation
-		mInfo.mController[VR_RIGHT].mRotation[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.x;
-		mInfo.mController[VR_RIGHT].mRotation[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.y;
-		mInfo.mController[VR_RIGHT].mRotation[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.z;
-		mInfo.mController[VR_RIGHT].mRotation[3] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.w;
+		mInfo.mController[VR_SIDE_RIGHT].mRotation[0] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.x;
+		mInfo.mController[VR_SIDE_RIGHT].mRotation[1] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.y;
+		mInfo.mController[VR_SIDE_RIGHT].mRotation[2] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.z;
+		mInfo.mController[VR_SIDE_RIGHT].mRotation[3] = hmdState.HandPoses[ovrHand_Right].ThePose.Orientation.w;
 
 		ovrInputState inputState;
 		ovr_GetInputState(mHmd, ovrControllerType_RTouch, &inputState);
 
 		// Thumb Stick Movement
 		ovrVector2f &thumbStickMovement = inputState.Thumbstick[ovrHand_Right];
-		mInfo.mController[VR_RIGHT].mThumbstick[0] = thumbStickMovement.x;
-		mInfo.mController[VR_RIGHT].mThumbstick[1] = thumbStickMovement.y;
+		mInfo.mController[VR_SIDE_RIGHT].mThumbstick[0] = thumbStickMovement.x;
+		mInfo.mController[VR_SIDE_RIGHT].mThumbstick[1] = thumbStickMovement.y;
 
 		// Triggers
-		mInfo.mController[VR_RIGHT].mIndexTrigger = inputState.IndexTrigger[ovrHand_Right];
-		mInfo.mController[VR_RIGHT].mHandTrigger = inputState.HandTrigger[ovrHand_Right];
+		mInfo.mController[VR_SIDE_RIGHT].mIndexTrigger = inputState.IndexTrigger[ovrHand_Right];
+		mInfo.mController[VR_SIDE_RIGHT].mHandTrigger = inputState.HandTrigger[ovrHand_Right];
 
 		// Buttons
-		uint64_t &buttons = mInfo.mController[VR_RIGHT].mButtons;
+		uint64_t &buttons = mInfo.mController[VR_SIDE_RIGHT].mButtons;
 		buttons = 0;
 		if (inputState.Buttons & ovrTouch_A)
 			buttons |= VR_BUTTON_A;

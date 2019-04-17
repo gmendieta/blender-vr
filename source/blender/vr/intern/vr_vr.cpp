@@ -62,16 +62,16 @@ int vr_initialize()
 	float left_fov[4];
 	float right_fov[4];
 	vrHmd->getEyeFrustumTangents(0, left_fov);
-	vr.eye_fov[VR_LEFT].up_tan = left_fov[0];
-	vr.eye_fov[VR_LEFT].down_tan = left_fov[1];
-	vr.eye_fov[VR_LEFT].left_tan = left_fov[2];
-	vr.eye_fov[VR_LEFT].right_tan = left_fov[3];
+	vr.eye_fov[VR_SIDE_LEFT].up_tan = left_fov[0];
+	vr.eye_fov[VR_SIDE_LEFT].down_tan = left_fov[1];
+	vr.eye_fov[VR_SIDE_LEFT].left_tan = left_fov[2];
+	vr.eye_fov[VR_SIDE_LEFT].right_tan = left_fov[3];
 
 	vrHmd->getEyeFrustumTangents(1, right_fov);
-	vr.eye_fov[VR_RIGHT].up_tan = right_fov[0];
-	vr.eye_fov[VR_RIGHT].down_tan = right_fov[1];
-	vr.eye_fov[VR_RIGHT].left_tan = right_fov[2];
-	vr.eye_fov[VR_RIGHT].right_tan = right_fov[3];
+	vr.eye_fov[VR_SIDE_RIGHT].up_tan = right_fov[0];
+	vr.eye_fov[VR_SIDE_RIGHT].down_tan = right_fov[1];
+	vr.eye_fov[VR_SIDE_RIGHT].left_tan = right_fov[2];
+	vr.eye_fov[VR_SIDE_RIGHT].right_tan = right_fov[3];
 
 	vr.win_vr = NULL;
 	vr.ar_vr = NULL;
@@ -123,6 +123,7 @@ ARegion* vr_region_get()
 void vr_region_set(struct ARegion *ar)
 {
 	vr.ar_vr = ar;
+	vrUiManager->setBlenderARegion(vr.ar_vr);
 }
 
 // Copied from wm_draw.c
@@ -317,7 +318,7 @@ int vr_begin_frame()
 	float head_matrix[4][4];
 
 	// Precompute eye matrices
-	for (int s = 0; s < VR_MAX_SIDES; ++s) {
+	for (int s = 0; s < VR_SIDES_MAX; ++s) {
 		vrHmd->getEyeTransform(s, position, rotation);
 		vr_oculus_blender_matrix_build(rotation, position, vr.eye_matrix[s]);
 		// Set Ui eye matrix
@@ -344,7 +345,7 @@ int vr_end_frame()
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
 	
-	for (int view = 0; view < VR_MAX_SIDES; ++view)
+	for (int view = 0; view < VR_SIDES_MAX; ++view)
 	{
 		unsigned int vr_texture_bindcode;
 		unsigned int view_texture_bindcode;
@@ -391,12 +392,12 @@ void vr_process_input()
 	VR_ControllerState rControllerState;
 
 	// Update left controller state
-	vrHmd->getControllerState(VR_LEFT, &lControllerState);
-	vrUiManager->setControllerState(VR_LEFT, lControllerState);
+	vrHmd->getControllerState(VR_SIDE_LEFT, &lControllerState);
+	vrUiManager->setControllerState(VR_SIDE_LEFT, lControllerState);
 
 	// Update right controller state
-	vrHmd->getControllerState(VR_RIGHT, &rControllerState);
-	vrUiManager->setControllerState(VR_RIGHT, rControllerState);
+	vrHmd->getControllerState(VR_SIDE_RIGHT, &rControllerState);
+	vrUiManager->setControllerState(VR_SIDE_RIGHT, rControllerState);
 
 	vrUiManager->processUserInput();
 }

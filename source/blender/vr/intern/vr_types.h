@@ -12,9 +12,9 @@ typedef enum _VR_Space
 
 typedef enum _VR_Side
 {
-	VR_LEFT,
-	VR_RIGHT,
-	VR_MAX_SIDES,
+	VR_SIDE_LEFT,
+	VR_SIDE_RIGHT,
+	VR_SIDES_MAX,
 } VR_Side;
 
 typedef enum _VR_TrackingOrigin

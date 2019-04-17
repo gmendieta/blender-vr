@@ -32,6 +32,8 @@ bool GHOST_VRManagerWin32::processEvents()
 	if (!vr_ghost_win || window != vr_ghost_win) {
 		return false;
 	}
+	// VR 
+	m_vrData.valid = 0;
 	VR_GHOST_Event *vr_event = NULL;
 	while (vr_event = vr_ghost_event_pop()) {
 		GHOST_Event *event = NULL;
@@ -39,27 +41,33 @@ bool GHOST_VRManagerWin32::processEvents()
 		switch (vr_event->getType()) {
 			case VR_GHOST_kEventCursorMove: {
 				VR_GHOST_EventCursor *eventCursor = (VR_GHOST_EventCursor*)vr_event;
-				event = processCursorEvents(eventCursor);
+				// The events will be pushed from within the function
+				event = processEventCursor(eventCursor);
+				break;
+			}
+			case VR_GHOST_kEventVRMotion: {
+				VR_GHOST_EventVRMotion *eventVRMotion = (VR_GHOST_EventVRMotion*)vr_event;
+				processEventVRMotion(eventVRMotion);
 				break;
 			}
 			case VR_GHOST_kEventButtonDown: {
-				VR_GHOST_EventButton * eventButton = (VR_GHOST_EventButton*)vr_event;
-				event = processButtonEvents(eventButton);
+				VR_GHOST_EventButton *eventButton = (VR_GHOST_EventButton*)vr_event;
+				event = processEventButton(eventButton);
 				break;
 			}
 			case VR_GHOST_kEventButtonUp: {
-				VR_GHOST_EventButton * eventButton = (VR_GHOST_EventButton*)vr_event;
-				event = processButtonEvents(eventButton);
+				VR_GHOST_EventButton *eventButton = (VR_GHOST_EventButton*)vr_event;
+				event = processEventButton(eventButton);
 				break;
 			}
 			case VR_GHOST_kEventKeyDown: {
 				VR_GHOST_EventKey *eventKey = (VR_GHOST_EventKey*)vr_event;
-				event = processKeyEvents(eventKey);
+				event = processEventKey(eventKey);
 				break;
 			}
 			case VR_GHOST_kEventKeyUp: {
 				VR_GHOST_EventKey *eventKey = (VR_GHOST_EventKey*)vr_event;
-				event = processKeyEvents(eventKey);
+				event = processEventKey(eventKey);
 				break;
 			}							 
 		}
@@ -73,23 +81,41 @@ bool GHOST_VRManagerWin32::processEvents()
 	return hasEventHandled;
 }
 
-GHOST_EventCursor* GHOST_VRManagerWin32::processCursorEvents(VR_GHOST_EventCursor *vr_event)
+const GHOST_VRData* GHOST_VRManagerWin32::getVRData()
+{
+	return &m_vrData;
+}
+
+GHOST_EventCursor* GHOST_VRManagerWin32::processEventCursor(VR_GHOST_EventCursor *vr_event)
 {
 	GHOST_WindowWin32 *window = (GHOST_WindowWin32*) m_system.getWindowManager()->getActiveWindow();
 	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
 
-	int screen_x, screen_y;
-	window->clientToScreen(vr_event->getX(), vr_event->getY(), screen_x, screen_y);
+	int x_screen, y_screen;
+	window->clientToScreen(vr_event->x(), vr_event->y(), x_screen, y_screen);
 
 	return new GHOST_EventCursor(system->getMilliSeconds(),
 		GHOST_kEventCursorMove,
 		window,
-		screen_x,
-		screen_y
+		x_screen,
+		y_screen
 	);
 }
 
-GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButton *vr_event)
+GHOST_EventVRMotion* GHOST_VRManagerWin32::processEventVRMotion(struct VR_GHOST_EventVRMotion *vr_event)
+{
+	//GHOST_WindowWin32 *window = (GHOST_WindowWin32*)m_system.getWindowManager()->getActiveWindow();
+	//GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
+
+	m_vrData.valid = 1;
+	m_vrData.x = vr_event->x();
+	m_vrData.y = vr_event->y();
+	m_vrData.z = vr_event->z();
+
+	return nullptr;
+}
+
+GHOST_EventButton * GHOST_VRManagerWin32::processEventButton(VR_GHOST_EventButton *vr_event)
 {
 	GHOST_WindowWin32 *window = (GHOST_WindowWin32*)m_system.getWindowManager()->getActiveWindow();
 	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
@@ -125,7 +151,7 @@ GHOST_EventButton * GHOST_VRManagerWin32::processButtonEvents(VR_GHOST_EventButt
 	);
 }
 
-GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey *vr_event)
+GHOST_EventKey* GHOST_VRManagerWin32::processEventKey(struct VR_GHOST_EventKey *vr_event)
 {
 	GHOST_WindowWin32 *window = (GHOST_WindowWin32*)m_system.getWindowManager()->getActiveWindow();
 	GHOST_SystemWin32 *system = (GHOST_SystemWin32 *)m_system.getSystem();
@@ -154,6 +180,24 @@ GHOST_EventKey* GHOST_VRManagerWin32::processKeyEvents(struct VR_GHOST_EventKey 
 			break;
 		case VR_GHOST_kKeyRightArrow:
 			key = GHOST_kKeyRightArrow;
+			break;
+		case VR_GHOST_kKeyLeftShift:
+			key = GHOST_kKeyLeftShift;
+			break;
+		case VR_GHOST_kKeyRightShift:
+			key = GHOST_kKeyRightShift;
+			break;
+		case VR_GHOST_kKeyLeftControl:
+			key = GHOST_kKeyLeftControl;
+			break;
+		case VR_GHOST_kKeyRightControl:
+			key = GHOST_kKeyRightControl;
+			break;
+		case VR_GHOST_kKeyLeftAlt:
+			key = GHOST_kKeyLeftAlt;
+			break;
+		case VR_GHOST_kKeyRightAlt:
+			key = GHOST_kKeyRightAlt;
 			break;
 	}
 

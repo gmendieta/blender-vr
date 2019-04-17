@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 struct wmWindow;
+struct ARegion;
 struct GPUOffScreen;
 
 class VR_UI_Manager
@@ -33,6 +34,12 @@ class VR_UI_Manager
 			m_window = NULL;
 		}
 	} VR_UI_HitResult;
+
+	typedef enum _VR_UI_State {
+		VR_UI_State_kNone = 0,
+		VR_UI_State_kNavigate,
+		VR_UI_State_kMenu,
+	} VR_UI_State;
 
 public:
 	VR_UI_Manager();
@@ -71,6 +78,9 @@ public:
 	/// Store Blender window
 	void setBlenderWindow(struct wmWindow *bWindow);
 
+	/// Store Blender ARegion
+	void setBlenderARegion(struct ARegion *bARegion);
+
 	/// Update internal textures
 	void updateUiTextures();
 
@@ -83,23 +93,23 @@ public:
 private:
 
 	const wmWindow *m_bWindow;
+	const ARegion *m_bARegion;
 	VR_UI_Window *m_mainMenu;
 
-	bool m_isNavigating{ false };							// Flag to control whether the user is navigating or not
-	bool m_isMovingMenu{ false };							// Flag to control whether the user is moving a menu or not
+	VR_UI_State m_state;
 
-	float m_bProjectionMatrix[VR_MAX_SIDES][4][4];			// Blender built Projection matrix
-	float m_bViewMatrix[VR_MAX_SIDES][4][4];				// Blender built View matrix
+	float m_bProjectionMatrix[VR_SIDES_MAX][4][4];			// Blender built Projection matrix
+	float m_bViewMatrix[VR_SIDES_MAX][4][4];				// Blender built View matrix
 
 	float m_viewMatrix[4][4];								// Cache view matrix
 	float m_viewProjectionMatrix[4][4];						// Cache view projection matrix
 
-	float m_eyeMatrix[VR_MAX_SIDES][4][4];					// Eye matrices
+	float m_eyeMatrix[VR_SIDES_MAX][4][4];					// Eye matrices
 	float m_headMatrix[4][4];								// Current Head matrix
 	float m_headInvMatrix[4][4];							// Current Head inverse matrix
 
-	float m_touchPrevMatrices[VR_MAX_SIDES][4][4];			// Touch controller start matrices
-	float m_touchMatrices[VR_MAX_SIDES][4][4];				// Touch controller matrices
+	float m_touchPrevMatrices[VR_SIDES_MAX][4][4];			// Touch controller start matrices
+	float m_touchMatrices[VR_SIDES_MAX][4][4];				// Touch controller matrices
 	float m_navScale;										// Navigation scale
 	float m_navMatrix[4][4];								// Accumulated navigation matrix
 	float m_navInvMatrix[4][4];								// Accumulated inverse matrix
@@ -113,22 +123,34 @@ private:
 	std::deque<VR_GHOST_Event*> m_handledEvents;
 
 
-	VR_ControllerState m_currentState[VR_MAX_SIDES];		// Current state of controllers
-	VR_ControllerState m_previousState[VR_MAX_SIDES];		// Previous state of controllers
+	VR_ControllerState m_currentState[VR_SIDES_MAX];		// Current state of controllers
+	VR_ControllerState m_previousState[VR_SIDES_MAX];		// Previous state of controllers
 
-	VR_UI_HitResult m_hitResult[VR_MAX_SIDES];						// Hit States
+	VR_UI_HitResult m_hitResult[VR_SIDES_MAX];						// Hit States
 
-	/// Compute Menu Ray hits
-	void computeMenuRayHits();
+	/// Returns the primary side
+	VR_Side getPrimarySide();
 
-	/// Compute Menu matrix
-	void computeMenuMatrix();
+	/// Returns the secondary side
+	VR_Side getSecondarySide();
 
-	/// Compute Ghost events
-	void computeGhostEvents();
+	/// Get current Touch controller coordinates in Screen coordinates
+	void getScreenCoordinates(unsigned int side, float coords[2]);
 
-	/// Compute navigation matrix
-	void computeNavMatrix();
+	/// Process Menu Ray hits
+	void processMenuRayHits();
+
+	/// Process Menu matrix
+	void processMenuMatrix();
+
+	/// Process Ghost events over the Menus
+	void processMenuGhostEvents();
+
+	/// Process navigation matrix
+	void processNavMatrix();
+
+	/// Process VR Ghost events
+	void processGhostEvents();
 
 	/// Compute a ray from a touch current state
 	void computeTouchControllerRay(unsigned int side, VR_Space space, float rayOrigin[3], float rayDir[3]);

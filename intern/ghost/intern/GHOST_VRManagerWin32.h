@@ -20,12 +20,16 @@
 #include "GHOST_VRManager.h"
 
 struct VR_GHOST_EventCursor;
+struct VR_GHOST_EventVRMotion;
 struct VR_GHOST_EventButton;
 struct VR_GHOST_EventKey;
 
-class GHOST_EventButton;
 class GHOST_EventCursor;
+class GHOST_EventVRMotion;
+class GHOST_EventButton;
 class GHOST_EventKey;
+
+class GHOST_EventVRMotion;
 
 class GHOST_VRManagerWin32: public GHOST_VRManager
 {
@@ -34,16 +38,16 @@ public:
 	virtual ~GHOST_VRManagerWin32() {}
 
 	bool processEvents() override;
+	const GHOST_VRData* getVRData() override;
 
 protected:
-	GHOST_EventCursor* processCursorEvents(struct VR_GHOST_EventCursor *event);
-	GHOST_EventButton* processButtonEvents(struct VR_GHOST_EventButton *event);
-	GHOST_EventKey* processKeyEvents(struct VR_GHOST_EventKey *event);
-
-
-
+	GHOST_EventCursor* processEventCursor(struct VR_GHOST_EventCursor *vr_event);
+	GHOST_EventVRMotion* processEventVRMotion(struct VR_GHOST_EventVRMotion *vr_event);
+	GHOST_EventButton* processEventButton(struct VR_GHOST_EventButton *vr_event);
+	GHOST_EventKey* processEventKey(struct VR_GHOST_EventKey *vr_event);
 
 private:
+	GHOST_VRData m_vrData;
 	
 };
 

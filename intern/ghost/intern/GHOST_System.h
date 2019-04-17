@@ -249,6 +249,7 @@ public:
 	 */
 	bool useTabletAPI(GHOST_TTabletAPI api) const;
 
+
 #ifdef WITH_INPUT_NDOF
 	/***************************************************************************************
 	 * Access to 3D mouse.
@@ -260,6 +261,11 @@ public:
 	 */
 	void setNDOFDeadZone(float deadzone);
 #endif
+
+	/**
+	* Returns the VR data
+	*/
+	const GHOST_VRData* getVRData() override;
 
 	/***************************************************************************************
 	 * Other (internal) functionality.

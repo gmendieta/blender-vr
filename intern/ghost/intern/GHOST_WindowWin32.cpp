@@ -878,6 +878,11 @@ GHOST_TSuccess GHOST_WindowWin32::setWindowCursorShape(GHOST_TStandardCursor cur
 	return GHOST_kSuccess;
 }
 
+const GHOST_VRData* GHOST_WindowWin32::getVRData()
+{
+	return m_system->getVRData();
+}
+
 void GHOST_WindowWin32::processWin32PointerEvent(WPARAM wParam)
 {
 	if (!m_system->useTabletAPI(GHOST_kTabletNative)) {

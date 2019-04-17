@@ -402,6 +402,11 @@ public:
 #endif
 
 	/**
+	* Returns the VR data
+	*/
+	virtual const GHOST_VRData *getVRData() = 0;
+
+	/**
 	 * Toggles console
 	 * \param action
 	 * - 0: Hides

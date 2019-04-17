@@ -33,6 +33,7 @@ public:
 	virtual ~GHOST_VRManager() {}
 
 	virtual bool processEvents() = 0;
+	virtual const GHOST_VRData* getVRData() = 0;
 
 protected:
 	GHOST_System& m_system;

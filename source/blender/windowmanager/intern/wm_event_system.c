@@ -86,12 +86,15 @@
 
 #include "DEG_depsgraph.h"
 
+#include "../vr/vr_vr.h"
+
 /* Motion in pixels allowed before we don't consider single/double click,
  * or detect the start of a tweak event. */
 #define WM_EVENT_CLICK_TWEAK_THRESHOLD (U.tweak_threshold * U.dpi_fac)
 
 static void wm_notifier_clear(wmNotifier *note);
 static void update_tablet_data(wmWindow *win, wmEvent *event);
+static void update_vr_data(wmWindow *win, wmEvent *event);
 
 static int wm_operator_call_internal(bContext *C, wmOperatorType *ot, PointerRNA *properties, ReportList *reports,
                                      const short context, const bool poll_only, wmEvent *event);
@@ -105,6 +108,7 @@ wmEvent *wm_event_add_ex(wmWindow *win, const wmEvent *event_to_add, const wmEve
 	*event = *event_to_add;
 
 	update_tablet_data(win, event);
+	update_vr_data(win, event);
 
 	if (ELEM(event->type, MOUSEMOVE, INBETWEEN_MOUSEMOVE)) {
 		/* We could have a preference to support relative tablet motion (we can't detect that). */
@@ -157,6 +161,10 @@ void wm_event_free(wmEvent *event)
 
 	if (event->tablet_data) {
 		MEM_freeN((void *)event->tablet_data);
+	}
+
+	if (event->vr_data) {
+		MEM_freeN((void *)event->vr_data);
 	}
 
 	MEM_freeN(event);
@@ -3119,12 +3127,15 @@ void wm_event_do_handlers(bContext *C)
 						ED_area_azones_update(sa, &event->x);
 					}
 
-					if (wm_event_inside_i(event, &sa->totrct)) {
+					int vr_event_inside_win = win == vr_window_get() && event->vr_data != NULL;
+					if (wm_event_inside_i(event, &sa->totrct) || vr_event_inside_win) {
 						CTX_wm_area_set(C, sa);
 
 						if ((action & WM_HANDLER_BREAK) == 0) {
 							for (ar = sa->regionbase.first; ar; ar = ar->next) {
-								if (wm_event_inside_i(event, &ar->winrct)) {
+								int vr_event_inside_region = ar == vr_region_get() && event->vr_data != NULL;
+
+								if (wm_event_inside_i(event, &ar->winrct) || vr_event_inside_region) {
 									CTX_wm_region_set(C, ar);
 
 									/* call even on non mouse events, since the */
@@ -3898,6 +3909,23 @@ static void update_tablet_data(wmWindow *win, wmEvent *event)
 	else {
 		event->tablet_data = NULL;
 		// printf("%s: not using tablet\n", __func__);
+	}
+}
+
+static void update_vr_data(wmWindow *win, wmEvent *event)
+{
+	GHOST_VRData *vrd = GHOST_getVRData(win->ghostwin);
+	if ((vrd != NULL) && vrd->valid != 0) {
+		struct wmVRData *wmvr = MEM_mallocN(sizeof(wmVRData), "customdata VR");
+
+		wmvr->tvec[0] = vrd->x;
+		wmvr->tvec[1] = vrd->y;
+		wmvr->tvec[2] = vrd->z;
+
+		event->vr_data = wmvr;
+	}
+	else {
+		event->vr_data = NULL;
 	}
 }
 
