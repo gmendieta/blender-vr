@@ -3044,7 +3044,7 @@ void blo_do_versions_280(FileData *fd, Library *UNUSED(lib), Main *bmain)
             ListBase *regionbase = (sl == sa->spacedata.first) ? &sa->regionbase : &sl->regionbase;
 
             /* Remove multiple footers that were added by mistake. */
-            do_versions_remove_region(regionbase, RGN_TYPE_HEADER);
+            do_versions_remove_region(regionbase, RGN_TYPE_FOOTER);
 
             /* Add footer. */
             ARegion *ar = do_versions_add_region(RGN_TYPE_FOOTER, "footer for text");
@@ -3112,6 +3112,18 @@ void blo_do_versions_280(FileData *fd, Library *UNUSED(lib), Main *bmain)
               gps->gradient_s[0] = 1.0f;
               gps->gradient_s[1] = 1.0f;
             }
+          }
+        }
+      }
+    }
+
+    /* enable the axis aligned ortho grid by default */
+    for (bScreen *screen = bmain->screens.first; screen; screen = screen->id.next) {
+      for (ScrArea *area = screen->areabase.first; area; area = area->next) {
+        for (SpaceLink *sl = area->spacedata.first; sl; sl = sl->next) {
+          if (sl->spacetype == SPACE_VIEW3D) {
+            View3D *v3d = (View3D *)sl;
+            v3d->gridflag |= V3D_SHOW_ORTHO_GRID;
           }
         }
       }

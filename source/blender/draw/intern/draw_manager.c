@@ -92,6 +92,8 @@
 #  include "GPU_select.h"
 #endif
 
+#include "../vr/vr_vr.h"
+
 /** Render State: No persistent data between draw calls. */
 DRWManager DST = {NULL};
 
@@ -1535,6 +1537,16 @@ void DRW_draw_render_loop_ex(struct Depsgraph *depsgraph,
   DRW_state_reset();
 
   DRW_hair_update();
+
+#ifdef WITH_VR
+  if (rv3d->rflag & RV3D_VR) {
+    uint view = v3d->multiview_eye;
+    vr_set_view_matrix(view, rv3d->viewmat);
+    vr_set_projection_matrix(view, rv3d->winmat);
+    // Draw before Blender
+    vr_region_do_pre_draw(view);
+  }
+#endif
 
   drw_engines_draw_background();
 

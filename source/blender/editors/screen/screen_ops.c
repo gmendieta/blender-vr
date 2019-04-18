@@ -3747,40 +3747,6 @@ static void SCREEN_OT_region_flip(wmOperatorType *ot)
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name Header Toggle Operator
- * \{ */
-
-static int header_exec(bContext *C, wmOperator *UNUSED(op))
-{
-  ARegion *ar = screen_find_region_type(C, RGN_TYPE_HEADER);
-
-  if (ar == NULL) {
-    return OPERATOR_CANCELLED;
-  }
-
-  ar->flag ^= RGN_FLAG_HIDDEN;
-
-  ED_area_tag_redraw(CTX_wm_area(C));
-
-  WM_event_add_notifier(C, NC_SCREEN | NA_EDITED, NULL);
-
-  return OPERATOR_FINISHED;
-}
-
-static void SCREEN_OT_header(wmOperatorType *ot)
-{
-  /* identifiers */
-  ot->name = "Toggle Header";
-  ot->description = "Toggle header display";
-  ot->idname = "SCREEN_OT_header";
-
-  /* api callbacks */
-  ot->exec = header_exec;
-}
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
 /** \name Header Toggle Menu Operator
  * \{ */
 
@@ -3830,7 +3796,9 @@ void ED_screens_header_tools_menu_create(bContext *C, uiLayout *layout, void *UN
                                                                 IFACE_("Flip to Top");
 
   if (!ELEM(sa->spacetype, SPACE_TOPBAR)) {
-    uiItemO(layout, IFACE_("Toggle Header"), ICON_NONE, "SCREEN_OT_header");
+    PointerRNA ptr;
+    RNA_pointer_create((ID *)CTX_wm_screen(C), &RNA_Space, sa->spacedata.first, &ptr);
+    uiItemR(layout, &ptr, "show_region_header", 0, IFACE_("Show Header"), ICON_NONE);
   }
 
   /* default is WM_OP_INVOKE_REGION_WIN, which we don't want here. */
@@ -4721,11 +4689,12 @@ static void SCREEN_OT_delete(wmOperatorType *ot)
 
 /* -------------------------------------------------------------------- */
 /** \name Region Alpha Blending Operator
+ *
+ * Implementation note: a disappearing region needs at least 1 last draw with
+ * 100% backbuffer texture over it - then triple buffer will clear it entirely.
+ * This because flag #RGN_FLAG_HIDDEN is set in end - region doesn't draw at all then.
+ *
  * \{ */
-
-/* implementation note: a disappearing region needs at least 1 last draw with 100% backbuffer
- * texture over it- then triple buffer will clear it entirely.
- * This because flag RGN_HIDDEN is set in end - region doesn't draw at all then */
 
 typedef struct RegionAlphaInfo {
   ScrArea *sa;
@@ -4785,7 +4754,7 @@ static void region_blend_end(bContext *C, ARegion *ar, const bool is_running)
   ar->regiontimer = NULL;
 }
 /* assumes that *ar itself is not a splitted version from previous region */
-void region_blend_start(bContext *C, ScrArea *sa, ARegion *ar)
+void ED_region_visibility_change_update_animated(bContext *C, ScrArea *sa, ARegion *ar)
 {
   wmWindowManager *wm = CTX_wm_manager(C);
   wmWindow *win = CTX_wm_window(C);
@@ -5109,7 +5078,6 @@ void ED_operatortypes_screen(void)
   WM_operatortype_append(SCREEN_OT_region_quadview);
   WM_operatortype_append(SCREEN_OT_region_scale);
   WM_operatortype_append(SCREEN_OT_region_flip);
-  WM_operatortype_append(SCREEN_OT_header);
   WM_operatortype_append(SCREEN_OT_header_toggle_menus);
   WM_operatortype_append(SCREEN_OT_header_context_menu);
   WM_operatortype_append(SCREEN_OT_footer);
