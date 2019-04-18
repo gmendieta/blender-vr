@@ -20,11 +20,15 @@
 GHOST_VRManagerWin32::GHOST_VRManagerWin32(GHOST_System &sys)
 	: GHOST_VRManager(sys)
 {
-	;
+	m_vrData.valid = 0;
 }
 
 bool GHOST_VRManagerWin32::processEvents()
 {
+	if (!vr_is_initialized()) {
+		return false;
+	}
+
 	bool hasEventHandled = false;
 	// We should only inject events in our GHOST window
 	GHOST_IWindow *window = m_system.getWindowManager()->getActiveWindow();
@@ -83,6 +87,9 @@ bool GHOST_VRManagerWin32::processEvents()
 
 const GHOST_VRData* GHOST_VRManagerWin32::getVRData()
 {
+	if (!vr_is_initialized()) {
+		return NULL;
+	}
 	return &m_vrData;
 }
 

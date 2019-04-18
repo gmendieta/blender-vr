@@ -311,6 +311,7 @@ const GHOST_VRData* GHOST_System::getVRData()
 	if (this->m_vrManager) {
 		return m_vrManager->getVRData();
 	}
+	return NULL;
 }
 
 GHOST_TSuccess GHOST_System::init()
