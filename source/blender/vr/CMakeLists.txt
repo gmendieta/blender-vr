@@ -79,6 +79,9 @@ set(SRC
     intern/vr_oculus.h
 )
 
+set(LIB
+)
+
 add_definitions(${GL_DEFINITIONS})
 
-blender_add_lib(bf_vr "${SRC}" "${INC}" "${INC_SYS}")
+blender_add_lib(bf_vr "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
