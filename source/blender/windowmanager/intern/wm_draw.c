@@ -569,6 +569,10 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
   wmWindowManager *wm = CTX_wm_manager(C);
   bScreen *screen = WM_window_get_active_screen(win);
 
+#ifdef WITH_VR
+  wmWindow *vr_win = vr_window_get();
+  ARegion *vr_ar = vr_region_get();
+#endif
   /* Draw screen areas into own frame buffer. */
   ED_screen_areas_iter(win, screen, sa)
   {
@@ -576,35 +580,6 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
 
     /* Compute UI layouts for dynamically size regions. */
     for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
-#ifdef WITH_VR
-			wmWindow *win_vr = vr_window_get();
-			ARegion *ar_vr = vr_region_get();
-			bool use_viewport = wm_region_use_viewport(sa, ar);
-			if (win_vr == win && (!ar_vr || ar == ar_vr) && use_viewport) {
-				CTX_wm_region_set(C, ar);
-				// Store the current View3D
-				if (!ar_vr) {
-					vr_region_set(ar);
-				}
-				vr_create_viewports(ar);
-
-				vr_begin_frame();
-
-				for (int view=0; view < 2; ++view) {
-					wm_draw_region_stereo_set(bmain, sa, ar, view);
-					
-					vr_draw_region_bind(ar, view);
-					// Draw before Blender is done from draw_manager.c
-					ED_region_do_draw(C, ar);			// Draw Blender
-					vr_region_do_post_draw(view);		// Draw after Blender
-					vr_draw_region_unbind(ar, view);
-				}
-
-				ar->do_draw = false;
-				CTX_wm_region_set(C, NULL);
-				continue;
-			}
-#endif
       if (ar->visible && ar->do_draw && ar->type && ar->type->layout) {
         CTX_wm_region_set(C, ar);
         ED_region_do_layout(C, ar);
@@ -626,7 +601,30 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
       if (ar->visible && ar->do_draw) {
         CTX_wm_region_set(C, ar);
         bool use_viewport = wm_region_use_viewport(sa, ar);
+#ifdef WITH_VR
+        if (vr_win == win && (!vr_ar || ar == vr_ar) && use_viewport) {
+          CTX_wm_region_set(C, ar);
+          if (!vr_ar) { // Store the current View3D
+            vr_region_set(ar);
+            vr_ar = vr_region_get();
+          }
+          vr_create_viewports(ar);
+          vr_begin_frame();
 
+          for (int view = 0; view < 2; ++view) {
+            wm_draw_region_stereo_set(bmain, sa, ar, view);
+            vr_draw_region_bind(ar, view);
+            // Draw before Blender is done from draw_manager.c
+            ED_region_do_draw(C, ar);			  // Blender drawing
+            vr_region_do_post_draw(view);		// VR drawing
+            vr_draw_region_unbind(ar, view);
+          }
+
+          ar->do_draw = false;
+          CTX_wm_region_set(C, NULL);
+          continue;
+        }
+#endif
         if (stereo && wm_draw_region_stereo_set(bmain, sa, ar, STEREO_LEFT_ID)) {
           wm_draw_region_buffer_create(ar, true, use_viewport);
 
@@ -702,21 +700,21 @@ static void wm_draw_window_onscreen(bContext *C, wmWindow *win, int view)
   glClear(GL_COLOR_BUFFER_BIT);
 #endif
 
+#ifdef WITH_VR
+  wmWindow *vr_win = vr_window_get();
+  ARegion *vr_ar = vr_region_get();
+#endif
+
   /* Blit non-overlapping area regions. */
   ED_screen_areas_iter(win, screen, sa)
   {
     for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
-
 #ifdef WITH_VR
 			// Need to perform this check agains the Region to avoid crashes because sometimes rflags are not initialized
-			wmWindow *win_vr = vr_window_get();
-			ARegion *ar_vr = vr_region_get();
-			if (win_vr == win && ar == ar_vr)
-			{
+			if (vr_win == win && ar == vr_ar) {
 				vr_end_frame();
 				wmWindowViewport(win);
-				if (ar->draw_buffer)
-				{
+				if (ar->draw_buffer) {
 					// If we want to use the VR wmWindow we need to paint the last processed view (because of matrices)
 					wm_draw_region_blend(ar, 1, false);
 				}

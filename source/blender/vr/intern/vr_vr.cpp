@@ -306,7 +306,7 @@ int vr_begin_frame()
 {
 	BLI_assert(vr.initialized);
 
-
+	// TODO Right now we are going to capture the BACK buffer here
 	vrUiManager->updateUiTextures();
 
 	// Update all VR states and tracking
@@ -380,8 +380,6 @@ int vr_end_frame()
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_fbo);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_fbo);
-
-	//vrUiManager->updateUiTextures();
 
 	return 1;
 }

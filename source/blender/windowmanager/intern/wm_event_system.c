@@ -429,6 +429,8 @@ void wm_event_do_notifiers(bContext *C)
             UI_popup_handlers_remove_all(C, &win->modalhandlers);
 
             WM_window_set_active_workspace(C, win, ref_ws);
+            // Lets try to reset the VR region when workspace is changed
+            vr_region_set(NULL);
             if (G.debug & G_DEBUG_EVENTS) {
               printf("%s: Workspace set %p\n", __func__, note->reference);
             }
