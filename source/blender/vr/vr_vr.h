@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 // Forward
+struct bContext;
 struct GPUViewport;
 struct wmWindow;
 struct View3D;
@@ -101,7 +102,7 @@ void vr_region_do_pre_draw(unsigned int view);
 void vr_region_do_post_draw(unsigned int view);
 
 /// Process the User input using VR devices
-void vr_process_input();
+void vr_process_input(bContext *C);
 
 /// Returns the oldest ghost event
 struct VR_GHOST_Event* vr_ghost_event_pop();

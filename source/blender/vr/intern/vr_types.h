@@ -103,5 +103,22 @@ typedef struct _VR_ControllerState
 	float mHandTrigger;					// Hand Trigger pressure [0.0, 1.0]
 } VR_ControllerState;
 
+/** VR event that will be passed to VR tools*/
+typedef struct _VR_Event
+{
+  float x;
+  float y;
+  float z;
+
+  float prevx;
+  float prevy;
+  float prevz;
+
+  short shift;
+  short ctrl;
+  short alt;
+
+  short click;
+} VR_Event;
 
 #endif // __VR_TYPES_H__

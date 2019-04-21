@@ -7,12 +7,17 @@
 #include "vr_types.h"
 #include "vr_ui_window.h"
 
+// Operators
+class VR_IOperator;
+class VR_OP_GPencil;
+
 struct VR_GHOST_Event;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct bContext;
 struct wmWindow;
 struct ARegion;
 struct GPUOffScreen;
@@ -39,6 +44,7 @@ class VR_UI_Manager
 		VR_UI_State_kNone = 0,
 		VR_UI_State_kNavigate,
 		VR_UI_State_kMenu,
+    VR_UI_State_kTool,
 	} VR_UI_State;
 
 public:
@@ -61,7 +67,7 @@ public:
 	void setProjectionMatrix(unsigned int side, const float matrix[4][4]);
 
 	/// Process the controller states
-	void processUserInput();
+	void processUserInput(bContext *C);
 
 	/// Draw GUI before Blender drawing
 	void doPreDraw(unsigned int side);
@@ -122,11 +128,14 @@ private:
 	std::deque<VR_GHOST_Event*> m_events;
 	std::deque<VR_GHOST_Event*> m_handledEvents;
 
-
 	VR_ControllerState m_currentState[VR_SIDES_MAX];		// Current state of controllers
 	VR_ControllerState m_previousState[VR_SIDES_MAX];		// Previous state of controllers
 
 	VR_UI_HitResult m_hitResult[VR_SIDES_MAX];						// Hit States
+
+  VR_Event m_event, m_prevEvent;
+  VR_IOperator *m_currentOp;
+  VR_OP_GPencil *m_gpencilOp;
 
 	/// Returns the primary side
 	VR_Side getPrimarySide();
@@ -149,6 +158,15 @@ private:
 	/// Process navigation matrix
 	void processNavMatrix();
 
+  /// Process VR events. Events will be saved as internal variables
+  void processVREvents();
+
+  /// Get the Suitable operator for the current context
+  VR_IOperator* getSuitableOperator(bContext *C);
+
+  /// Process VR tools
+  void processOperators(bContext *C);
+
 	/// Process VR Ghost events
 	void processGhostEvents();
 
@@ -163,6 +181,9 @@ private:
 
 	/// Draw graphical user interface
 	void drawUserInterface();
+
+  /// Draw Operators
+  void drawOperators();
 
 	/// Ghost Events
 	void pushGhostEvent(VR_GHOST_Event *event);

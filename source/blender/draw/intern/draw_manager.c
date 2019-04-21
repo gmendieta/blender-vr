@@ -1575,6 +1575,13 @@ void DRW_draw_render_loop_ex(struct Depsgraph *depsgraph,
 
   drw_engines_draw_scene();
 
+#ifdef WITH_VR
+  if (rv3d->rflag & RV3D_VR) {
+    uint view = v3d->multiview_eye;
+    vr_region_do_post_draw(view);
+  }
+#endif
+
 #ifdef __APPLE__
   /* Fix 3D view being "laggy" on macos. (See T56996) */
   GPU_flush();

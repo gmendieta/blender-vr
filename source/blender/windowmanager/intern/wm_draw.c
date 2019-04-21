@@ -610,13 +610,14 @@ static void wm_draw_window_offscreen(bContext *C, wmWindow *win, bool stereo)
           }
           vr_create_viewports(ar);
           vr_begin_frame();
+          vr_process_input(C);
 
           for (int view = 0; view < 2; ++view) {
             wm_draw_region_stereo_set(bmain, sa, ar, view);
             vr_draw_region_bind(ar, view);
             // Draw before Blender is done from draw_manager.c
             ED_region_do_draw(C, ar);			  // Blender drawing
-            vr_region_do_post_draw(view);		// VR drawing
+            //vr_region_do_post_draw(view);		// VR drawing
             vr_draw_region_unbind(ar, view);
           }
 

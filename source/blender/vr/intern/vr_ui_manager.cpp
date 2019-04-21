@@ -2,15 +2,21 @@
 #include "vr_utils.h"
 #include "vr_ghost_types.h"
 
+// VR operators
+#include "vr_ioperator.h"
+#include "vr_op_gpencil.h"
+
 #include <string.h>	// memcpy
 
 #include "GPU_context.h"
 
 extern "C"
 {
-
 #include "vr_draw_cache.h"
 #include "draw_cache.h"
+
+#include "BKE_context.h"
+
 #include "BLI_math_matrix.h"
 #include "BLI_math_vector.h"
 
@@ -25,7 +31,8 @@ static const float VR_RAY_LEN = 0.1f;
 
 VR_UI_Manager::VR_UI_Manager():
 	m_bWindow(NULL),
-	m_state(VR_UI_State_kNone)
+	m_state(VR_UI_State_kNone),
+	m_currentOp(NULL)
 {
 	// Set identity navigation matrices
 	unit_m4(m_headMatrix);
@@ -40,7 +47,10 @@ VR_UI_Manager::VR_UI_Manager():
 		unit_m4(m_touchMatrices[s]);
 		unit_m4(m_eyeMatrix[s]);
 	}
-
+	
+	// Init Operators
+	m_gpencilOp = new VR_OP_GPencil();
+	
 	// Create Blender Menu
 	m_mainMenu = new VR_UI_Window();
 	float menuMatrix[4][4];
@@ -86,7 +96,7 @@ void VR_UI_Manager::setProjectionMatrix(unsigned int side, const float matrix[4]
 	copy_m4_m4(m_bProjectionMatrix[side], matrix);
 }
 
-void VR_UI_Manager::processUserInput()
+void VR_UI_Manager::processUserInput(bContext *C)
 {
 	// Early return
 	if (!m_currentState[VR_SIDE_RIGHT].mEnabled && !m_currentState[VR_SIDE_LEFT].mEnabled) {
@@ -96,8 +106,9 @@ void VR_UI_Manager::processUserInput()
 	processMenuMatrix();
 	processMenuGhostEvents();
 	processNavMatrix();
+	processVREvents();
+	processOperators(C);
 	processGhostEvents();
-
 
 	// Update navigation matrix
 	m_mainMenu->setNavMatrix(m_navScaledMatrix);
@@ -485,6 +496,90 @@ void VR_UI_Manager::processNavMatrix()
 	}
 }
 
+void VR_UI_Manager::processVREvents()
+{
+	// Update previous event
+	m_prevEvent.alt = m_event.alt;
+	m_prevEvent.ctrl = m_event.ctrl;
+	m_prevEvent.shift = m_event.shift;
+	m_prevEvent.click = m_event.click;
+
+	// Store current event previous values
+	m_event.prevx = m_prevEvent.x;
+	m_event.prevy = m_prevEvent.y;
+	m_event.prevz = m_prevEvent.z;
+
+	m_prevEvent.x = m_event.x;
+	m_prevEvent.y = m_event.y;
+	m_prevEvent.z = m_event.z;
+	
+	// Update current event
+	m_event.alt = m_event.shift = m_event.ctrl = m_event.click = 0;
+	m_event.x = m_event.y = m_event.z = 0.0f;
+
+	VR_Side sidePrimary = getPrimarySide();
+	VR_Side sideSecondary = getSecondarySide();
+	// Right Hand
+	if (m_currentState[sidePrimary].mEnabled) {
+		float matrix[4][4];
+		copy_m4_m4(matrix, m_touchMatrices[sidePrimary]);
+		// Apply navigation to model to make it appear in Eye space
+		mul_m4_m4_pre(matrix, m_navScaledMatrix);
+		copy_v3_v3(&m_event.x, matrix[3]);
+		bool indexTriggerDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
+		if (indexTriggerDown) {
+			m_event.click = 1;
+		}
+	}
+	// Left Hand
+	if (m_currentState[sideSecondary].mEnabled) {
+		bool indexTriggerDown = m_currentState[sideSecondary].mButtons & VR_BUTTON_LINDEX_TRIGGER;
+		bool buttonYDown = m_currentState[sideSecondary].mButtons & VR_BUTTON_Y;
+		bool buttonXDown = m_currentState[sideSecondary].mButtons & VR_BUTTON_X;
+
+		if (indexTriggerDown) {
+			m_event.shift = 1;
+		}
+		if (buttonYDown) {
+			m_event.ctrl = 1;
+		}
+		if (buttonXDown) {
+			m_event.alt = 1;
+		}
+	}
+}
+
+VR_IOperator* VR_UI_Manager::getSuitableOperator(bContext * C)
+{
+	if (m_gpencilOp->isSuitable(C)) {
+		return (VR_IOperator*)m_gpencilOp;
+	}
+	return NULL;
+}
+
+void VR_UI_Manager::processOperators(bContext *C)
+{
+	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kTool) {
+		return;
+	}
+
+	VR_IOperator *op = getSuitableOperator(C);
+	if (m_currentOp && m_currentOp != op) {
+		m_currentOp->finish(C);
+	}
+	m_currentOp = op;
+	if (m_currentOp) {
+		if (m_event.click) {
+			m_state = VR_UI_State_kTool;
+			m_currentOp->invoke(C, &m_event);
+		}
+		else {
+			m_currentOp->finish(C);
+			m_state = VR_UI_State_kNone;
+		}
+	}
+}
+
 void VR_UI_Manager::computeTouchControllerRay(unsigned int side, VR_Space space, float rayOrigin[3], float rayDir[3])
 {
 	float touchMatrix[4][4];
@@ -567,10 +662,9 @@ void VR_UI_Manager::doPreDraw(unsigned int side)
 
 void VR_UI_Manager::doPostDraw(unsigned int side)
 {
-	GPU_depth_test(true);
 	drawTouchControllers();
 	drawUserInterface();
-	GPU_depth_test(false);
+	drawOperators();
 }
 
 void VR_UI_Manager::drawTouchControllers()
@@ -592,6 +686,8 @@ void VR_UI_Manager::drawTouchControllers()
 	GPUShader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
 	GPU_batch_program_set_shader(batch, shader);
 
+
+	GPU_depth_test(true);
 	for (int touchSide = 0; touchSide < VR_SIDES_MAX; ++touchSide) {
 		// Build ModelViewProjection matrix
 		copy_m4_m4(modelViewProj, m_touchMatrices[touchSide]);
@@ -618,6 +714,7 @@ void VR_UI_Manager::drawTouchControllers()
 		computeTouchControllerRay(touchSide, VR_Space::VR_VR_SPACE, rayOrigin, rayDir);
 		drawRay(rayOrigin, rayDir, rayLen, touchColor[touchSide]);
 	}
+	GPU_depth_test(false);
 }
 
 void VR_UI_Manager::drawRay(float rayOrigin[3], float rayDir[3], float rayLen, float rayColor[4])
@@ -649,7 +746,16 @@ void VR_UI_Manager::drawRay(float rayOrigin[3], float rayDir[3], float rayLen, f
 
 void VR_UI_Manager::drawUserInterface()
 {
+	GPU_depth_test(true);
 	m_mainMenu->draw(m_viewProjectionMatrix);
+	GPU_depth_test(false);
+}
+
+void VR_UI_Manager::drawOperators()
+{
+	if (m_currentOp) {
+		m_currentOp->draw(m_viewProjectionMatrix);
+	}
 }
 
 void VR_UI_Manager::pushGhostEvent(VR_GHOST_Event *event)

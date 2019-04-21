@@ -13,6 +13,7 @@ extern "C"
 #include "DNA_camera_types.h"
 #include "DNA_windowmanager_types.h"
 
+#include "BKE_context.h"
 #include "BKE_camera.h"
 
 #include "GPU_framebuffer.h"
@@ -330,8 +331,6 @@ int vr_begin_frame()
 	vr_oculus_blender_matrix_build(rotation, position, head_matrix);
 	vrUiManager->setHeadMatrix(head_matrix);
 
-	// Update Input
-	vr_process_input();
 	return 1;
 }
 
@@ -384,7 +383,7 @@ int vr_end_frame()
 	return 1;
 }
 
-void vr_process_input()
+void vr_process_input(bContext *C)
 {
 	VR_ControllerState lControllerState;
 	VR_ControllerState rControllerState;
@@ -397,7 +396,7 @@ void vr_process_input()
 	vrHmd->getControllerState(VR_SIDE_RIGHT, &rControllerState);
 	vrUiManager->setControllerState(VR_SIDE_RIGHT, rControllerState);
 
-	vrUiManager->processUserInput();
+	vrUiManager->processUserInput(C);
 }
 
 void vr_region_do_pre_draw(unsigned int view)
