@@ -119,6 +119,8 @@ typedef struct _VR_Event
   short alt;
 
   short click;
+
+  float pressure;
 } VR_Event;
 
 #endif // __VR_TYPES_H__

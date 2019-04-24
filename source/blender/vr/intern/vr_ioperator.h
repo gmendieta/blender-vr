@@ -14,7 +14,7 @@ class VR_IOperator
 public:
 
   /// Wheter the Operator is suitable for the current State
-  virtual bool isSuitable(bContext *C) = 0;
+  virtual bool isSuitable(bContext *C, VR_Event *event) = 0;
 
   /// Invoke the operator 
   virtual int invoke(bContext *C, VR_Event *event) = 0;

@@ -10,6 +10,7 @@ extern "C"
 {
 #endif
 
+ struct Brush;
 struct bGPDspoint;
 
 class VR_OP_GPencil : VR_IOperator
@@ -22,7 +23,7 @@ public:
   ~VR_OP_GPencil();
 
   /// Wheter the Operator is suitable for the current State
-  bool isSuitable(bContext *C) override;
+  bool isSuitable(bContext *C, VR_Event *event) override;
 
   /// Invoke the operator 
   int invoke(bContext *C, VR_Event *event) override;
@@ -34,11 +35,9 @@ public:
   int draw(float viewProj[4][4]) override;
 
 private:
-  float m_radius;
-  float m_strength;
   float m_color[4];
   std::vector<bGPDspoint> m_points; // Stroke 3d points
-  void initializeBrushData(bContext *C);
+  Brush* getBrush(bContext *C);
 
  
 };

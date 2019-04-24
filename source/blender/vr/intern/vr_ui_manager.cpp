@@ -16,6 +16,7 @@ extern "C"
 #include "draw_cache.h"
 
 #include "BKE_context.h"
+#include "ED_undo.h"
 
 #include "BLI_math_matrix.h"
 #include "BLI_math_vector.h"
@@ -107,8 +108,8 @@ void VR_UI_Manager::processUserInput(bContext *C)
 	processMenuGhostEvents();
 	processNavMatrix();
 	processVREvents();
-	processOperators(C);
-	processGhostEvents();
+	processOperators(C, &m_event);
+	processGhostEvents(C);
 
 	// Update navigation matrix
 	m_mainMenu->setNavMatrix(m_navScaledMatrix);
@@ -311,7 +312,7 @@ void VR_UI_Manager::processMenuGhostEvents()
 	}
 }
 
-void VR_UI_Manager::processGhostEvents()
+void VR_UI_Manager::processGhostEvents(bContext *C)
 {
 	// Early return
 	if (m_state != VR_UI_State_kNone) {
@@ -324,6 +325,21 @@ void VR_UI_Manager::processGhostEvents()
 	if (!m_currentState[sidePrimary].mEnabled && !m_currentState[sideSecondary].mEnabled) {
 		return;
 	}
+
+	/*
+	// Undo and Redo
+	bool currThumbstickSwipeLeft = m_currentState[sideSecondary].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
+	bool prevThumbstickSwipeLeft = m_previousState[sideSecondary].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
+	bool currThumbstickSwipeRight = m_currentState[sideSecondary].mButtons & VR_THUMBSTICK_SWIPE_RIGHT;
+	bool prevThumbstickSwipeRight = m_previousState[sideSecondary].mButtons & VR_THUMBSTICK_SWIPE_RIGHT;
+
+	if (currThumbstickSwipeLeft && !prevThumbstickSwipeLeft) {
+		ED_undo_pop(C);
+	}
+	else if (currThumbstickSwipeRight && !prevThumbstickSwipeRight) {
+		ED_undo_redo(C);
+	}
+	*/
 
 	bool currIndexTriggerDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
 	bool prevIndexTriggerDown = m_previousState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
@@ -503,6 +519,7 @@ void VR_UI_Manager::processVREvents()
 	m_prevEvent.ctrl = m_event.ctrl;
 	m_prevEvent.shift = m_event.shift;
 	m_prevEvent.click = m_event.click;
+	m_prevEvent.pressure = m_event.pressure;
 
 	// Store current event previous values
 	m_event.prevx = m_prevEvent.x;
@@ -526,10 +543,16 @@ void VR_UI_Manager::processVREvents()
 		// Apply navigation to model to make it appear in Eye space
 		mul_m4_m4_pre(matrix, m_navScaledMatrix);
 		copy_v3_v3(&m_event.x, matrix[3]);
+		m_event.pressure = m_currentState[sidePrimary].mIndexTrigger;
+		if (m_event.pressure > 0.0f) {
+			m_event.click = 1;
+		}
+		/*
 		bool indexTriggerDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
 		if (indexTriggerDown) {
 			m_event.click = 1;
 		}
+		*/
 	}
 	// Left Hand
 	if (m_currentState[sideSecondary].mEnabled) {
@@ -549,34 +572,32 @@ void VR_UI_Manager::processVREvents()
 	}
 }
 
-VR_IOperator* VR_UI_Manager::getSuitableOperator(bContext * C)
+VR_IOperator* VR_UI_Manager::getSuitableOperator(bContext * C, VR_Event *event)
 {
-	if (m_gpencilOp->isSuitable(C)) {
+	if (m_gpencilOp->isSuitable(C, event)) {
 		return (VR_IOperator*)m_gpencilOp;
 	}
 	return NULL;
 }
 
-void VR_UI_Manager::processOperators(bContext *C)
+void VR_UI_Manager::processOperators(bContext *C, VR_Event *event)
 {
 	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kTool) {
 		return;
 	}
 
-	VR_IOperator *op = getSuitableOperator(C);
+	// TODO Does not make sense to check suitability twice. By now is ok
+	VR_IOperator *op = getSuitableOperator(C, event);
 	if (m_currentOp && m_currentOp != op) {
 		m_currentOp->finish(C);
 	}
 	m_currentOp = op;
-	if (m_currentOp) {
-		if (m_event.click) {
-			m_state = VR_UI_State_kTool;
-			m_currentOp->invoke(C, &m_event);
-		}
-		else {
-			m_currentOp->finish(C);
-			m_state = VR_UI_State_kNone;
-		}
+	if (m_currentOp && m_currentOp->isSuitable(C, event)) {
+		m_state = VR_UI_State_kTool;
+		m_currentOp->invoke(C, &m_event);
+	}
+	else {
+		m_state = VR_UI_State_kNone;
 	}
 }
 

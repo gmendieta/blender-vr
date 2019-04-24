@@ -162,13 +162,13 @@ private:
   void processVREvents();
 
   /// Get the Suitable operator for the current context
-  VR_IOperator* getSuitableOperator(bContext *C);
+  VR_IOperator* getSuitableOperator(bContext *C, VR_Event *event);
 
   /// Process VR tools
-  void processOperators(bContext *C);
+  void processOperators(bContext *C, VR_Event *event);
 
 	/// Process VR Ghost events
-	void processGhostEvents();
+	void processGhostEvents(bContext *C);
 
 	/// Compute a ray from a touch current state
 	void computeTouchControllerRay(unsigned int side, VR_Space space, float rayOrigin[3], float rayDir[3]);
