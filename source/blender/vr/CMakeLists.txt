@@ -64,6 +64,7 @@ set(SRC
     intern/vr_ui_window.cpp
     intern/vr_ui_manager.cpp
     intern/vr_oculus.cpp
+    intern/vr_op_gpencil.cpp
 
     vr_build.h
     vr_ghost_types.h
@@ -77,6 +78,8 @@ set(SRC
     intern/vr_ui_window.h
     intern/vr_ui_manager.h
     intern/vr_oculus.h
+    intern/vr_ioperator.h
+    intern/vr_op_gpencil.h
 )
 
 set(LIB
