@@ -283,7 +283,6 @@ GHOST_IWindow *GHOST_SystemWin32::createWindow(const STR_String &title,
       type,
       ((glSettings.flags & GHOST_glStereoVisual) != 0),
       ((glSettings.flags & GHOST_glAlphaBackground) != 0),
-      glSettings.numOfAASamples,
       parentWindow,
       ((glSettings.flags & GHOST_glDebugContext) != 0));
 
@@ -331,7 +330,6 @@ GHOST_IContext *GHOST_SystemWin32::createOffscreenContext()
   for (int minor = 5; minor >= 0; --minor) {
     context = new GHOST_ContextWGL(false,
                                    true,
-                                   0,
                                    wnd,
                                    mHDC,
                                    WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
@@ -350,7 +348,6 @@ GHOST_IContext *GHOST_SystemWin32::createOffscreenContext()
 
   context = new GHOST_ContextWGL(false,
                                  true,
-                                 0,
                                  wnd,
                                  mHDC,
                                  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
@@ -378,7 +375,6 @@ GHOST_IContext *GHOST_SystemWin32::createOffscreenContext()
   // 2.1 ignores the profile bit & is incompatible with core profile
   context = new GHOST_ContextWGL(false,
                                  true,
-                                 0,
                                  NULL,
                                  NULL,
                                  0,  // no profile bit
