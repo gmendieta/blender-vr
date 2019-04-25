@@ -5,6 +5,8 @@ extern "C"
 {
 #endif
 
+#include "PIL_time.h"
+
 #include "DNA_object_types.h"
 #include "DNA_gpencil_types.h"
 #include "DNA_scene_types.h"
@@ -18,6 +20,9 @@ extern "C"
 
 #include "BLI_utildefines.h"
 #include "BLI_math_vector.h"
+#include "BLI_rand.h"
+#include "BLI_utildefines.h"
+
 
 #include "DEG_depsgraph.h"
 #include "DEG_depsgraph_query.h"
@@ -31,7 +36,8 @@ extern "C"
 
 #define GPENCIL_PRESSURE_MIN 0.01f
 
-VR_OP_GPencil::VR_OP_GPencil()
+VR_OP_GPencil::VR_OP_GPencil():
+	m_rng(NULL)
 {	
 	m_color[0] = m_color[1] = m_color[2] = 0.0f;	// Color
 	m_color[3] = 1.0f;								// Alpha
@@ -62,20 +68,59 @@ int VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 		return 0;
 	}
 
-	Brush* brush = getBrush(C);
+	Brush *brush = getBrush(C);
+	RNG *rng = getRNG();
+
 	bGPDspoint pt;
 	memcpy(&pt.x, &event->x, 3 * sizeof(float));
 	
-	// Copied from gpencil.paint.c
+	float pressure = event->pressure;
+
+	// Copied from gpencil_paint.c
+
+	/* pressure */
 	if (brush->gpencil_settings->flag & GP_BRUSH_USE_PRESSURE) {
 		float curvef = curvemapping_evaluateF(
-			brush->gpencil_settings->curve_sensitivity, 0, event->pressure);
+			brush->gpencil_settings->curve_sensitivity, 0, pressure);
 		pt.pressure = curvef * brush->gpencil_settings->draw_sensitivity;
 	}
 	else {
 		pt.pressure = 1.0f;
 	}
+
+	/* apply randomness to pressure */
+	if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_RANDOM) &&
+		(brush->gpencil_settings->draw_random_press > 0.0f)) {
+		float curvef = curvemapping_evaluateF(
+			brush->gpencil_settings->curve_sensitivity, 0, pressure);
+		float tmp_pressure = curvef * brush->gpencil_settings->draw_sensitivity;
+		if (BLI_rng_get_float(rng) > 0.5f) {
+			pt.pressure -= tmp_pressure * brush->gpencil_settings->draw_random_press *
+				BLI_rng_get_float(rng);
+		}
+		else {
+			pt.pressure += tmp_pressure * brush->gpencil_settings->draw_random_press *
+				BLI_rng_get_float(rng);
+		}
+		CLAMP(pt.pressure, GPENCIL_STRENGTH_MIN, 1.0f);
+	}
+
+	/* apply randomness to uv texture rotation */
+	if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_RANDOM) &&
+		(brush->gpencil_settings->uv_random > 0.0f)) {
+		if (BLI_rng_get_float(rng) > 0.5f) {
+			pt.uv_rot = (BLI_rng_get_float(rng) * M_PI * -1) * brush->gpencil_settings->uv_random;
+		}
+		else {
+			pt.uv_rot = (BLI_rng_get_float(rng) * M_PI) * brush->gpencil_settings->uv_random;
+		}
+		CLAMP(pt.uv_rot, -M_PI_2, M_PI_2);
+	}
+	else {
+		pt.uv_rot = 0.0f;
+	}
 	
+	/* color strength */
 	if (brush->gpencil_settings->flag & GP_BRUSH_USE_STENGTH_PRESSURE) {
 		float curvef = curvemapping_evaluateF(brush->gpencil_settings->curve_strength, 0, event->pressure);
 		float tmp_pressure = curvef * brush->gpencil_settings->draw_sensitivity;
@@ -85,6 +130,20 @@ int VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 		pt.strength = brush->gpencil_settings->draw_strength;
 	}
 	CLAMP(pt.strength, GPENCIL_STRENGTH_MIN, 1.0f);
+
+	/* apply randomness to color strength */
+	if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_RANDOM) &&
+		(brush->gpencil_settings->draw_random_strength > 0.0f)) {
+		if (BLI_rng_get_float(rng) > 0.5f) {
+			pt.strength -= pt.strength * brush->gpencil_settings->draw_random_strength *
+				BLI_rng_get_float(rng);
+		}
+		else {
+			pt.strength += pt.strength * brush->gpencil_settings->draw_random_strength *
+				BLI_rng_get_float(rng);
+		}
+		CLAMP(pt.strength, GPENCIL_STRENGTH_MIN, 1.0f);
+	}
 
 	m_points.push_back(pt);
 	return 1;
@@ -190,6 +249,17 @@ Brush* VR_OP_GPencil::getBrush(bContext * C)
 		DEG_id_tag_update(&scene->id, ID_RECALC_COPY_ON_WRITE);
 	}
 	return paint->brush;
+}
+
+RNG* VR_OP_GPencil::getRNG()
+{
+	/* Random generator, only init once. */
+	if (!m_rng) {
+		uint rng_seed = (uint)(PIL_check_seconds_timer_i() & UINT_MAX);
+		rng_seed ^= POINTER_AS_UINT(this);
+		m_rng = BLI_rng_new(rng_seed);
+	}
+	return m_rng;
 }
 
 

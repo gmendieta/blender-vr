@@ -10,7 +10,8 @@ extern "C"
 {
 #endif
 
- struct Brush;
+struct RNG;
+struct Brush;
 struct bGPDspoint;
 
 class VR_OP_GPencil : VR_IOperator
@@ -37,9 +38,10 @@ public:
 private:
   float m_color[4];
   std::vector<bGPDspoint> m_points; // Stroke 3d points
-  Brush* getBrush(bContext *C);
+  RNG *m_rng;
 
- 
+  Brush* getBrush(bContext *C);
+  RNG* getRNG();
 };
 
 #ifdef __cplusplus
