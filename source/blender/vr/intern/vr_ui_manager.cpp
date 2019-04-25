@@ -675,17 +675,17 @@ void VR_UI_Manager::updateUiTextures()
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_fbo);
 }
 
-void VR_UI_Manager::doPreDraw(unsigned int side)
+void VR_UI_Manager::doPreDraw(bContext *C, unsigned int side)
 {
 	// All matrices have been already updated. Cache them
 	mul_m4_m4m4(m_viewProjectionMatrix, m_bProjectionMatrix[side], m_bViewMatrix[side]);
 }
 
-void VR_UI_Manager::doPostDraw(unsigned int side)
+void VR_UI_Manager::doPostDraw(bContext *C, unsigned int side)
 {
 	drawTouchControllers();
 	drawUserInterface();
-	drawOperators();
+	drawOperators(C);
 }
 
 void VR_UI_Manager::drawTouchControllers()
@@ -772,10 +772,10 @@ void VR_UI_Manager::drawUserInterface()
 	GPU_depth_test(false);
 }
 
-void VR_UI_Manager::drawOperators()
+void VR_UI_Manager::drawOperators(bContext *C)
 {
 	if (m_currentOp) {
-		m_currentOp->draw(m_viewProjectionMatrix);
+		m_currentOp->draw(C, m_viewProjectionMatrix);
 	}
 }
 

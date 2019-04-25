@@ -399,14 +399,14 @@ void vr_process_input(bContext *C)
 	vrUiManager->processUserInput(C);
 }
 
-void vr_region_do_pre_draw(unsigned int view)
+void vr_region_do_pre_draw(bContext *C, unsigned int view)
 {
-	vrUiManager->doPreDraw(view);
+	vrUiManager->doPreDraw(C, view);
 }
 
-void vr_region_do_post_draw(unsigned int view)
+void vr_region_do_post_draw(bContext *C, unsigned int view)
 {
-	vrUiManager->doPostDraw(view);
+	vrUiManager->doPostDraw(C, view);
 }
 
 int vr_get_eye_texture_size(int *width, int *height)

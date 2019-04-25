@@ -23,7 +23,7 @@ public:
   virtual int finish(bContext *C) = 0;
 
   /// Draw the operator
-  virtual int draw(float viewProj[4][4]) = 0;
+  virtual int draw(bContext *C, float viewProj[4][4]) = 0;
 };
 
 }

@@ -33,7 +33,7 @@ public:
   int finish(bContext *C) override;
 
   /// Draw the operator
-  int draw(float viewProj[4][4]) override;
+  int draw(bContext *C, float viewProj[4][4]) override;
 
 private:
   float m_color[4];

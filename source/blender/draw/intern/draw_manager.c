@@ -1596,7 +1596,7 @@ void DRW_draw_render_loop_ex(struct Depsgraph *depsgraph,
     vr_set_view_matrix(view, rv3d->viewmat);
     vr_set_projection_matrix(view, rv3d->winmat);
     // Draw before Blender
-    vr_region_do_pre_draw(view);
+    vr_region_do_pre_draw(evil_C, view);
   }
 #endif
 
@@ -1630,7 +1630,7 @@ void DRW_draw_render_loop_ex(struct Depsgraph *depsgraph,
 #ifdef WITH_VR
   if (rv3d->rflag & RV3D_VR) {
     uint view = v3d->multiview_eye;
-    vr_region_do_post_draw(view);
+    vr_region_do_post_draw(evil_C, view);
   }
 #endif
 

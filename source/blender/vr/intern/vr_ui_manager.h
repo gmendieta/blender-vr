@@ -70,10 +70,10 @@ public:
 	void processUserInput(bContext *C);
 
 	/// Draw GUI before Blender drawing
-	void doPreDraw(unsigned int side);
+	void doPreDraw(bContext *C, unsigned int side);
 
 	/// Draw GUI after Blender drawing
-	void doPostDraw(unsigned int side);
+	void doPostDraw(bContext *C, unsigned int side);
 
 	/// Get the current navigation matrix
 	void getNavMatrix(float matrix[4][4], bool scaled);
@@ -183,7 +183,7 @@ private:
 	void drawUserInterface();
 
   /// Draw Operators
-  void drawOperators();
+  void drawOperators(bContext *C);
 
 	/// Ghost Events
 	void pushGhostEvent(VR_GHOST_Event *event);

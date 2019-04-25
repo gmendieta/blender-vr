@@ -16,13 +16,13 @@ extern "C"
 #include "BKE_gpencil.h"
 #include "BKE_report.h"
 #include "BKE_brush.h"
+#include "BKE_material.h"
 #include "BKE_colortools.h"
 
 #include "BLI_utildefines.h"
 #include "BLI_math_vector.h"
 #include "BLI_rand.h"
 #include "BLI_utildefines.h"
-
 
 #include "DEG_depsgraph.h"
 #include "DEG_depsgraph_query.h"
@@ -33,6 +33,54 @@ extern "C"
 #include "GPU_immediate.h"
 #include "GPU_state.h"
 #include "GPU_draw.h"
+
+/* conversion utility (float --> normalized unsigned byte) */
+#define F2UB(x) (uchar)(255.0f * x)
+
+/* helper functions to set color of buffer point */
+static void gp_set_point_uniform_color(const bGPDspoint *pt, const float ink[4])
+{
+	float alpha = ink[3] * pt->strength;
+	CLAMP(alpha, GPENCIL_STRENGTH_MIN, 1.0f);
+	immUniformColor3fvAlpha(ink, alpha);
+}
+
+static void gp_set_point_varying_color(const bGPDspoint *pt, const float ink[4], uint attr_id)
+{
+	float alpha = ink[3] * pt->strength;
+	CLAMP(alpha, GPENCIL_STRENGTH_MIN, 1.0f);
+	immAttr4ub(attr_id, F2UB(ink[0]), F2UB(ink[1]), F2UB(ink[2]), F2UB(alpha));
+}
+
+/* draw a 3D stroke in "volumetric" style */
+static void gp_draw_stroke_volumetric_3d(const bGPDspoint *points,
+										int totpoints,
+										short thickness,
+										const float ink[4])
+{
+	GPUVertFormat *format = immVertexFormat();
+	uint pos = GPU_vertformat_attr_add(format, "pos", GPU_COMP_F32, 3, GPU_FETCH_FLOAT);
+	uint size = GPU_vertformat_attr_add(format, "size", GPU_COMP_F32, 1, GPU_FETCH_FLOAT);
+	uint color = GPU_vertformat_attr_add(
+		format, "color", GPU_COMP_U8, 4, GPU_FETCH_INT_TO_FLOAT_UNIT);
+
+	immBindBuiltinProgram(GPU_SHADER_3D_POINT_VARYING_SIZE_VARYING_COLOR);
+	GPU_enable_program_point_size();
+	immBegin(GPU_PRIM_POINTS, totpoints);
+
+	const bGPDspoint *pt = points;
+	for (int i = 0; i < totpoints && pt; i++, pt++) {
+		gp_set_point_varying_color(pt, ink, color);
+		/* TODO: scale based on view transform */
+		immAttr1f(size, pt->pressure * thickness);
+		/* we can adjust size in vertex shader based on view/projection! */
+		immVertex3fv(pos, &pt->x);
+	}
+
+	immEnd();
+	immUnbindProgram();
+	GPU_disable_program_point_size();
+}
 
 #define GPENCIL_PRESSURE_MIN 0.01f
 
@@ -192,33 +240,37 @@ int VR_OP_GPencil::finish(bContext *C)
 	return 1;
 }
 
-int VR_OP_GPencil::draw(float viewProj[4][4])
+int VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 {
 	int totpoints = m_points.size();
 	if (totpoints < 2) {
 		return 1;
 	}
-	int draw_points = 0;
+	
+	float sthickness;
+	float ink[4];
+	
+	Brush *brush = getBrush(C);
+	Object *ob = CTX_data_active_object(C);
+	// Copied from function gpencil_draw_utils.c function DRW_gpencil_populate_buffer_strokes
+	MaterialGPencilStyle *gp_style = NULL;
+	float obscale = mat4_to_scale(ob->obmat);
 
-	GPUVertFormat *format = immVertexFormat();
-	uint pos = GPU_vertformat_attr_add(format, "pos", GPU_COMP_F32, 3, GPU_FETCH_FLOAT);
-
-	immBindBuiltinProgram(GPU_SHADER_3D_UNIFORM_COLOR);
-	immUniformColor3fvAlpha(m_color, m_color[3]);
-
-	 /* draw stroke curve */
-	// TODO
-	GPU_line_width(1.0f);
-	immBeginAtMost(GPU_PRIM_LINE_STRIP, totpoints);
-	for (int i = 0; i < totpoints; i++) {
-		bGPDspoint &pt = m_points[i];
-				
-		immVertex3fv(pos, &pt.x);
-		draw_points++;
+	/* use the brush material */
+	Material *ma = BKE_gpencil_object_material_get_from_brush(ob, brush);
+	if (ma != NULL) {
+		gp_style = ma->gp_style;
+	}
+	/* this is not common, but avoid any special situations when brush could be without material */
+	if (gp_style == NULL) {
+		gp_style = BKE_material_gpencil_settings_get(ob, ob->actcol);
 	}
 
-	immEnd();
-	immUnbindProgram();
+	sthickness = brush->size * obscale;
+	copy_v4_v4(ink, gp_style->stroke_rgba);
+
+	// Draw points
+	gp_draw_stroke_volumetric_3d(m_points.data(), totpoints, sthickness, ink);
 
 	return 1;
 }

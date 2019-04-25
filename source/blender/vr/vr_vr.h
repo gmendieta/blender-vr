@@ -96,10 +96,10 @@ int vr_begin_frame();
 int vr_end_frame();
 
 /// Called just before Blender drawing
-void vr_region_do_pre_draw(unsigned int view);
+void vr_region_do_pre_draw(bContext *C, unsigned int view);
 
 /// Called just after BLender drawing
-void vr_region_do_post_draw(unsigned int view);
+void vr_region_do_post_draw(bContext *C, unsigned int view);
 
 /// Process the User input using VR devices
 void vr_process_input(bContext *C);
