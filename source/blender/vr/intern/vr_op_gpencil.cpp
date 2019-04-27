@@ -93,6 +93,9 @@ VR_OP_GPencil::VR_OP_GPencil():
 
 VR_OP_GPencil::~VR_OP_GPencil()
 {
+	if (m_rng) {
+		BLI_rng_free(m_rng);
+	}
 }
 
 bool VR_OP_GPencil::isSuitable(bContext *C, VR_Event *event)
@@ -215,21 +218,69 @@ int VR_OP_GPencil::finish(bContext *C)
 	}
 
 	if ((gpf) && (gpl) && ((gpl->flag & GP_LAYER_LOCKED) == 0 || (gpl->flag & GP_LAYER_HIDE) == 0)) {
-		int totpoints = m_points.size();
-		bGPDstroke *gps = BKE_gpencil_add_stroke(gpf, 0, m_points.size(), 1.0f);
 
-		Brush* brush = getBrush(C);
+		Brush *brush = getBrush(C);
+		RNG *rng = getRNG();
+
+		int totpoints = m_points.size();
+		int mat_idx = BKE_gpencil_object_material_get_index_from_brush(ob, brush);
+		bGPDstroke *gps = BKE_gpencil_add_stroke(gpf, mat_idx, m_points.size(), 1.0f);
+
 		gps->thickness = brush->size;
 		gps->gradient_f = brush->gpencil_settings->gradient_f;
 		copy_v2_v2(gps->gradient_s, brush->gpencil_settings->gradient_s);
 
 		/* Save material index */
-		gps->mat_nr = BKE_gpencil_object_material_get_index_from_brush(ob, brush);
 
 		/* calculate UVs along the stroke */
 		ED_gpencil_calc_stroke_uv(ob, gps);
 		
 		memcpy(gps->points, m_points.data(), totpoints * sizeof(bGPDspoint));
+
+		/* post process stroke */
+		// Copied from gpencil_draw.c function gp_stroke_newfrombuffer
+
+		const int subdivide = brush->gpencil_settings->draw_subdivide;
+
+		/* subdivide and smooth the stroke */
+		if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_SETTINGS) && (subdivide > 0)) {
+			gp_subdivide_stroke(gps, subdivide);
+		}
+		/* apply randomness to stroke */
+		if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_RANDOM) &&
+			(brush->gpencil_settings->draw_random_sub > 0.0f)) {
+			gp_randomize_stroke(gps, brush, rng);
+		}
+
+		/* smooth stroke after subdiv - only if there's something to do
+		* for each iteration, the factor is reduced to get a better smoothing without changing too much
+		* the original stroke
+		*/
+		if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_SETTINGS) &&
+			(brush->gpencil_settings->draw_smoothfac > 0.0f)) {
+			float reduce = 0.0f;
+			for (int r = 0; r < brush->gpencil_settings->draw_smoothlvl; r++) {
+				for (int i = 0; i < gps->totpoints - 1; i++) {
+					BKE_gpencil_smooth_stroke(gps, i, brush->gpencil_settings->draw_smoothfac - reduce);
+					BKE_gpencil_smooth_stroke_strength(gps, i, brush->gpencil_settings->draw_smoothfac);
+				}
+				reduce += 0.25f;  // reduce the factor
+			}
+		}
+		/* smooth thickness */
+		if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_SETTINGS) &&
+			(brush->gpencil_settings->thick_smoothfac > 0.0f)) {
+			for (int r = 0; r < brush->gpencil_settings->thick_smoothlvl * 2; r++) {
+				for (int i = 0; i < gps->totpoints - 1; i++) {
+					BKE_gpencil_smooth_stroke_thickness(gps, i, brush->gpencil_settings->thick_smoothfac);
+				}
+			}
+		}
+
+		if ((brush->gpencil_settings->flag & GP_BRUSH_GROUP_SETTINGS) &&
+			brush->gpencil_settings->flag & GP_BRUSH_TRIM_STROKE) {
+			BKE_gpencil_trim_stroke(gps);
+		}
 
 		/* update depsgraph */
 		DEG_id_tag_update(&gpd->id, ID_RECALC_TRANSFORM | ID_RECALC_GEOMETRY);
@@ -252,7 +303,7 @@ int VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 	
 	Brush *brush = getBrush(C);
 	Object *ob = CTX_data_active_object(C);
-	// Copied from function gpencil_draw_utils.c function DRW_gpencil_populate_buffer_strokes
+	// Copied from gpencil_draw_utils.c function DRW_gpencil_populate_buffer_strokes
 	MaterialGPencilStyle *gp_style = NULL;
 	float obscale = mat4_to_scale(ob->obmat);
 
@@ -269,7 +320,7 @@ int VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 	sthickness = brush->size * obscale;
 	copy_v4_v4(ink, gp_style->stroke_rgba);
 
-	// Draw points
+	// TODO Draw depending on GP options
 	gp_draw_stroke_volumetric_3d(m_points.data(), totpoints, sthickness, ink);
 
 	return 1;
@@ -313,7 +364,6 @@ RNG* VR_OP_GPencil::getRNG()
 	}
 	return m_rng;
 }
-
 
 #ifdef __cplusplus
 }
