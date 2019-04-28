@@ -45,10 +45,10 @@ class VR_UI_Manager
 	} VR_UI_HitResult;
 
 	typedef enum _VR_UI_State {
-		VR_UI_State_kNone = 0,
+		VR_UI_State_kIdle = 0,
 		VR_UI_State_kNavigate,
 		VR_UI_State_kMenu,
-    VR_UI_State_kTool,
+    VR_UI_State_kOperator,
 	} VR_UI_State;
 
 public:
@@ -108,25 +108,25 @@ private:
 
 	VR_UI_State m_state;
 
-	float m_bProjectionMatrix[VR_SIDES_MAX][4][4];			// Blender built Projection matrix
-	float m_bViewMatrix[VR_SIDES_MAX][4][4];				// Blender built View matrix
+	float m_bProjectionMatrix[VR_SIDES_MAX][4][4];		// Blender built Projection matrix
+	float m_bViewMatrix[VR_SIDES_MAX][4][4];				  // Blender built View matrix
 
-	float m_viewMatrix[4][4];								// Cache view matrix
-	float m_viewProjectionMatrix[4][4];						// Cache view projection matrix
+	float m_viewMatrix[4][4];							          	// Cache view matrix
+	float m_viewProjectionMatrix[4][4];   						// Cache view projection matrix
 
-	float m_eyeMatrix[VR_SIDES_MAX][4][4];					// Eye matrices
-	float m_headMatrix[4][4];								// Current Head matrix
-	float m_headInvMatrix[4][4];							// Current Head inverse matrix
+	float m_eyeMatrix[VR_SIDES_MAX][4][4];					  // Eye matrices
+	float m_headMatrix[4][4];								          // Current Head matrix
+	float m_headInvMatrix[4][4];							        // Current Head inverse matrix
 
-	float m_touchPrevMatrices[VR_SIDES_MAX][4][4];			// Touch controller start matrices
+	float m_touchPrevMatrices[VR_SIDES_MAX][4][4];		// Touch controller start matrices
 	float m_touchMatrices[VR_SIDES_MAX][4][4];				// Touch controller matrices
-	float m_navScale;										// Navigation scale
-	float m_navMatrix[4][4];								// Accumulated navigation matrix
-	float m_navInvMatrix[4][4];								// Accumulated inverse matrix
-	float m_navScaledMatrix[4][4];							// Accumulated navigation matrix scaled
-	float m_navScaledInvMatrix[4][4];						// Accumulated navigation inverse matrix scaled
+	float m_navScale;										              // Navigation scale
+	float m_navMatrix[4][4];								          // Accumulated navigation matrix
+	float m_navInvMatrix[4][4];								        // Accumulated inverse matrix
+	float m_navScaledMatrix[4][4];							      // Accumulated navigation matrix scaled
+	float m_navScaledInvMatrix[4][4];						      // Accumulated navigation inverse matrix scaled
 
-	float m_menuPrevMatrix[4][4];							// Previous Menu matrix for Menu moving
+	float m_menuPrevMatrix[4][4];							        // Previous Menu matrix for Menu moving
 
 	// GHOST Events
 	std::deque<VR_GHOST_Event*> m_events;

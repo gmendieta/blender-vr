@@ -34,6 +34,18 @@ extern "C"
 #include "GPU_state.h"
 #include "GPU_draw.h"
 
+// enum copied from gpencil_paint.c
+/* values for tGPsdata->status */
+typedef enum eGPencil_PaintStatus {
+	GP_STATUS_IDLING = 0, /* stroke isn't in progress yet */
+	GP_STATUS_PAINTING,   /* a stroke is in progress */
+	GP_STATUS_ERROR,      /* something wasn't correctly set up */
+	GP_STATUS_DONE,       /* painting done */
+} eGPencil_PaintStatus;
+
+/* current status of painting. */
+static eGPencil_PaintStatus status;
+
 /* conversion utility (float --> normalized unsigned byte) */
 #define F2UB(x) (uchar)(255.0f * x)
 
@@ -102,22 +114,33 @@ bool VR_OP_GPencil::isSuitable(bContext *C, VR_Event *event)
 {
 	Object *ob = CTX_data_active_object(C);
 	bGPdata *gpd = ED_gpencil_data_get_active_evaluated(C);
-	if (!ob || ob->type != OB_GPENCIL || !GPENCIL_PAINT_MODE(gpd) || event->pressure < GPENCIL_PRESSURE_MIN) {
+	if (!ob || ob->type != OB_GPENCIL || !GPENCIL_PAINT_MODE(gpd)) {
 		return false;
 	}
 	return true;
 }
 
-int VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
+VR_OPERATOR_STATE VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 {
-	if (!isSuitable(C, event)) {	
-		return 0;
+	if (event->pressure < GPENCIL_PRESSURE_MIN) {
+		if (status == GP_STATUS_PAINTING) {
+			addStroke(C);
+		}
+		status = GP_STATUS_IDLING;
+		return VR_OPERATOR_FINISHED;
 	}
 
 	bGPDlayer *gpl = CTX_data_active_gpencil_layer(C);
 	if ((gpl) && ((gpl->flag & GP_LAYER_LOCKED) || (gpl->flag & GP_LAYER_HIDE))) {
-		return 0;
+		if (status == GP_STATUS_PAINTING) {
+			addStroke(C);
+		}
+		status = GP_STATUS_IDLING;
+		return VR_OPERATOR_FINISHED;
 	}
+
+	// We are painting
+	status = GP_STATUS_PAINTING;
 
 	Brush *brush = getBrush(C);
 	RNG *rng = getRNG();
@@ -128,7 +151,6 @@ int VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 	float pressure = event->pressure;
 
 	// Copied from gpencil_paint.c
-
 	/* pressure */
 	if (brush->gpencil_settings->flag & GP_BRUSH_USE_PRESSURE) {
 		float curvef = curvemapping_evaluateF(
@@ -197,10 +219,10 @@ int VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 	}
 
 	m_points.push_back(pt);
-	return 1;
+	return VR_OPERATOR_RUNNING;
 }
 
-int VR_OP_GPencil::finish(bContext *C)
+int VR_OP_GPencil::addStroke(bContext *C)
 {
 	if (m_points.empty()) {
 		return 1;
@@ -291,11 +313,11 @@ int VR_OP_GPencil::finish(bContext *C)
 	return 1;
 }
 
-int VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
+void VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 {
 	int totpoints = m_points.size();
 	if (totpoints < 2) {
-		return 1;
+		return;
 	}
 	
 	float sthickness;
@@ -303,6 +325,7 @@ int VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 	
 	Brush *brush = getBrush(C);
 	Object *ob = CTX_data_active_object(C);
+
 	// Copied from gpencil_draw_utils.c function DRW_gpencil_populate_buffer_strokes
 	MaterialGPencilStyle *gp_style = NULL;
 	float obscale = mat4_to_scale(ob->obmat);
@@ -322,8 +345,6 @@ int VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 
 	// TODO Draw depending on GP options
 	gp_draw_stroke_volumetric_3d(m_points.data(), totpoints, sthickness, ink);
-
-	return 1;
 }
 
 Brush* VR_OP_GPencil::getBrush(bContext * C)

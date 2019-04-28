@@ -27,13 +27,13 @@ public:
   bool isSuitable(bContext *C, VR_Event *event) override;
 
   /// Invoke the operator 
-  int invoke(bContext *C, VR_Event *event) override;
+  VR_OPERATOR_STATE invoke(bContext *C, VR_Event *event) override;
 
   /// Stop the operator
-  int finish(bContext *C) override;
+  int addStroke(bContext *C);
 
   /// Draw the operator
-  int draw(bContext *C, float viewProj[4][4]) override;
+  void draw(bContext *C, float viewProj[4][4]) override;
 
 private:
   float m_color[4];

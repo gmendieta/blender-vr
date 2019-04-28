@@ -140,9 +140,9 @@ bool VR_UI_Window::intersectRay(float rayOrigin[3], float rayDir[3], float hitRe
 	aspectMatrix[2][2] = 1.0f / aspect;
 	aspectMatrix[3][3] = 1.0;
 
+	// Intersection is performed in VR Space
 	copy_m4_m4(menuMatrix, aspectMatrix);
 	mul_m4_m4_pre(menuMatrix, m_matrix);
-	mul_m4_m4_pre(menuMatrix, m_navMatrix);
 
 	// TODO Refactor asap!!. Maybe building our own batch
 	float tri1[3][3] = { { -1.0f, 0.0f, -1.0f },{ 1.0f, 0.0f, -1.0f },{ 1.0f, 0.0f, 1.0f } };

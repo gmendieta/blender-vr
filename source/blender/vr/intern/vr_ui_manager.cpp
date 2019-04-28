@@ -32,14 +32,14 @@ extern "C"
 static const float VR_RAY_LEN = 0.1f;
 
 // Variables that control the Thumbstick movement of Menues
-static const float VR_MENU_MOVE_SPEED = 0.01f;
+static const float VR_MENU_MOVE_SPEED = 0.1f;
 static const float VR_MENU_MOVE_DIST_MAX = 5.0f;
 static const float VR_MENU_MOVE_DIST_MIN = 0.5f;
 
 VR_UI_Manager::VR_UI_Manager():
-	m_bWindow(NULL),
-	m_state(VR_UI_State_kNone),
-	m_currentOp(NULL)
+	m_bWindow(nullptr),
+	m_state(VR_UI_State_kIdle),
+	m_currentOp(nullptr)
 {
 	// Set identity navigation matrices
 	unit_m4(m_headMatrix);
@@ -159,7 +159,7 @@ void VR_UI_Manager::getTouchScreenCoordinates(unsigned int side, float coords[2]
 void VR_UI_Manager::processMenuRayHits()
 {
 	// Early return
-	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kMenu) {
+	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu) {
 		return;
 	}
 
@@ -171,7 +171,8 @@ void VR_UI_Manager::processMenuRayHits()
 	for (int side = 0; side < VR_SIDES_MAX; ++side) {
 		// Clear Hit
 		m_hitResult[side].clear();
-		computeTouchControllerRay(side, VR_Space::VR_NAV_SCALED_SPACE, rayOrigin, rayDir);
+		// Rays are computed in VR Space
+		computeTouchControllerRay(side, VR_Space::VR_VR_SPACE, rayOrigin, rayDir);
 		copy_v3_v3(m_hitResult[side].m_rayOrigin, rayOrigin);
 		copy_v3_v3(m_hitResult[side].m_rayDir, rayDir);
 		bool hit = m_mainMenu->intersectRay(rayOrigin, rayDir, hitResult);
@@ -188,14 +189,14 @@ void VR_UI_Manager::processMenuRayHits()
 void VR_UI_Manager::processMenuMatrix()
 {
 	// Early return
-	if ((m_state != VR_UI_State_kNone && m_state != VR_UI_State_kMenu)) {
+	if ((m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu)) {
 		return;
 	}
 	bool prevRHandTrigger = m_previousState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
 	bool currRHandTrigger = m_currentState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
 
 	if (!currRHandTrigger || !m_hitResult[VR_SIDE_RIGHT].m_hit) {
-		m_state = VR_UI_State_kNone;
+		m_state = VR_UI_State_kIdle;
 	}
 	else {
 		m_state = VR_UI_State_kMenu;
@@ -231,7 +232,7 @@ void VR_UI_Manager::processMenuMatrix()
 			float moveDelta[3];
 			unit_m4(moveMatrix);
 			copy_v3_v3(moveDelta, m_hitResult[VR_SIDE_RIGHT].m_rayDir);
-			mul_v3_fl(moveDelta, currRThumbstickUpDown);
+			mul_v3_fl(moveDelta, currRThumbstickUpDown * VR_MENU_MOVE_SPEED);
 			translate_m4(moveMatrix, moveDelta[0], moveDelta[1], moveDelta[2]);
 			mul_m4_m4_pre(menuMatrix, moveMatrix);
 		}
@@ -248,13 +249,13 @@ void VR_UI_Manager::processMenuMatrix()
 void VR_UI_Manager::processMenuGhostEvents()
 {
 	// Early return
-	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kMenu) {
+	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu) {
 		return;
 	}
 
 	VR_Side sidePrimary = getPrimarySide();
 	if (!m_hitResult[sidePrimary].m_hit) {
-		m_state = VR_UI_State_kNone;
+		m_state = VR_UI_State_kIdle;
 	}
 	if (m_hitResult[sidePrimary].m_hit) {
 		m_state = VR_UI_State_kMenu;
@@ -343,7 +344,7 @@ void VR_UI_Manager::processMenuGhostEvents()
 void VR_UI_Manager::processGhostEvents(bContext *C)
 {
 	// Early return
-	if (m_state != VR_UI_State_kNone) {
+	if (m_state != VR_UI_State_kIdle) {
 		return;
 	}
 
@@ -454,7 +455,7 @@ void VR_UI_Manager::processGhostEvents(bContext *C)
 void VR_UI_Manager::processNavMatrix()
 {
 	// Early return
-	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kNavigate) {
+	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kNavigate) {
 		return;
 	}
 
@@ -467,7 +468,7 @@ void VR_UI_Manager::processNavMatrix()
 	bool isNavTwoHands = currRHandTrigger && currLHandTrigger;
 
 	if (!isNav) {
-		m_state = VR_UI_State_kNone;
+		m_state = VR_UI_State_kIdle;
 	}
 	else {
 		m_state = VR_UI_State_kNavigate;
@@ -602,30 +603,37 @@ void VR_UI_Manager::processVREvents()
 
 VR_IOperator* VR_UI_Manager::getSuitableOperator(bContext * C, VR_Event *event)
 {
+
 	if (m_gpencilOp->isSuitable(C, event)) {
 		return (VR_IOperator*)m_gpencilOp;
 	}
-	return NULL;
+	return nullptr;
 }
 
 void VR_UI_Manager::processOperators(bContext *C, VR_Event *event)
 {
-	if (m_state != VR_UI_State_kNone && m_state != VR_UI_State_kTool) {
+	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kOperator) {
 		return;
 	}
 
-	// TODO Does not make sense to check suitability twice. By now is ok
-	VR_IOperator *op = getSuitableOperator(C, event);
-	if (m_currentOp && m_currentOp != op) {
-		m_currentOp->finish(C);
+	/**
+	When an operator starts, we will invoke it until it returns something different from VR_OPERATOR_RUNNING
+	*/
+	if (!m_currentOp) {
+		m_currentOp = getSuitableOperator(C, event);
 	}
-	m_currentOp = op;
-	if (m_currentOp && m_currentOp->isSuitable(C, event)) {
-		m_state = VR_UI_State_kTool;
-		m_currentOp->invoke(C, &m_event);
+	if (m_currentOp) {
+		VR_OPERATOR_STATE state_op = m_currentOp->invoke(C, event);
+		if (state_op == VR_OPERATOR_RUNNING) {
+			m_state = VR_UI_State_kOperator;
+		}
+		else {
+			m_currentOp = nullptr;
+			m_state = VR_UI_State_kIdle;
+		}
 	}
 	else {
-		m_state = VR_UI_State_kNone;
+		m_state = VR_UI_State_kIdle;
 	}
 }
 
@@ -815,7 +823,7 @@ void VR_UI_Manager::pushGhostEvent(VR_GHOST_Event *event)
 
 struct VR_GHOST_Event* VR_UI_Manager::popGhostEvent()
 {
-	VR_GHOST_Event *event = NULL;
+	VR_GHOST_Event *event = nullptr;
 	if (!m_events.empty()) {
 		event = m_events.front();
 		m_events.pop_front();
