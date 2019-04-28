@@ -28,12 +28,16 @@ class VR_UI_Manager
 	typedef struct _VR_UI_HitResult
 	{
 		bool m_hit;
+    float m_rayOrigin[3];   // Ray origin
+    float m_rayDir[3];      // Ray direction
 		float m_uv[2];
 		float m_dist;
 		VR_UI_Window *m_window;
 
 		void clear() {
 			m_hit = false;
+      m_rayOrigin[0] = m_rayOrigin[1] = m_rayOrigin[2] = 0.0f;
+      m_rayDir[0] = m_rayDir[2] = 0.0f; m_rayDir[1] = 1.0f;
 			m_dist = 0.0f;
 			m_uv[0] = m_uv[1] = 0.0f;
 			m_window = NULL;
@@ -144,7 +148,7 @@ private:
 	VR_Side getSecondarySide();
 
 	/// Get current Touch controller coordinates in Screen coordinates
-	void getScreenCoordinates(unsigned int side, float coords[2]);
+	void getTouchScreenCoordinates(unsigned int side, float coords[2]);
 
 	/// Process Menu Ray hits
 	void processMenuRayHits();

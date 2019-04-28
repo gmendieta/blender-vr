@@ -28,7 +28,13 @@ extern "C"
 #include "GPU_shader.h"
 #include "GPU_state.h"
 
+// Length of the drawn Ray when there is no Hit
 static const float VR_RAY_LEN = 0.1f;
+
+// Variables that control the Thumbstick movement of Menues
+static const float VR_MENU_MOVE_SPEED = 0.01f;
+static const float VR_MENU_MOVE_DIST_MAX = 5.0f;
+static const float VR_MENU_MOVE_DIST_MIN = 0.5f;
 
 VR_UI_Manager::VR_UI_Manager():
 	m_bWindow(NULL),
@@ -65,6 +71,10 @@ VR_UI_Manager::~VR_UI_Manager()
 	if (m_mainMenu) {
 		delete m_mainMenu;
 		m_mainMenu = nullptr;
+	}
+	if (m_gpencilOp) {
+		delete m_gpencilOp;
+		m_gpencilOp = nullptr;
 	}
 }
 
@@ -125,7 +135,7 @@ VR_Side VR_UI_Manager::getSecondarySide()
 	return VR_SIDE_LEFT;
 }
 
-void VR_UI_Manager::getScreenCoordinates(unsigned int side, float coords[2])
+void VR_UI_Manager::getTouchScreenCoordinates(unsigned int side, float coords[2])
 {
 	float viewProjectionMatrix[4][4];
 	mul_m4_m4m4(viewProjectionMatrix, m_bProjectionMatrix[side], m_bViewMatrix[side]);
@@ -162,6 +172,8 @@ void VR_UI_Manager::processMenuRayHits()
 		// Clear Hit
 		m_hitResult[side].clear();
 		computeTouchControllerRay(side, VR_Space::VR_NAV_SCALED_SPACE, rayOrigin, rayDir);
+		copy_v3_v3(m_hitResult[side].m_rayOrigin, rayOrigin);
+		copy_v3_v3(m_hitResult[side].m_rayDir, rayDir);
 		bool hit = m_mainMenu->intersectRay(rayOrigin, rayDir, hitResult);
 		m_hitResult[side].m_hit = hit;
 		if (hit) {
@@ -193,27 +205,43 @@ void VR_UI_Manager::processMenuMatrix()
 			vr_oculus_blender_matrix_build(m_currentState[VR_SIDE_RIGHT].mRotation, m_currentState[VR_SIDE_RIGHT].mPosition, m_touchPrevMatrices[VR_SIDE_RIGHT]);
 			menu->getMatrix(m_menuPrevMatrix);
 		}
-
 		////// Navigation temporal matrices ///////
 		float navMatrix[4][4];
 		float navInvMatrix[4][4];
 		float deltaMatrix[4][4];
 		float menuMatrix[4][4];
+		float moveMatrix[4][4];
 
-		if (m_hitResult[VR_SIDE_RIGHT].m_hit) {
-			VR_UI_Window *menu = m_hitResult[VR_SIDE_RIGHT].m_window;
-			// Copy already calculated matrix
-			copy_m4_m4(navMatrix, m_touchMatrices[VR_SIDE_RIGHT]);
-			// Invert the current controller matrix in order to achieve inverse transformation
-			invert_m4_m4(navInvMatrix, navMatrix);
-			// Get delta
-			mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_SIDE_RIGHT], navInvMatrix);
+		// Copy already calculated matrix
+		copy_m4_m4(navMatrix, m_touchMatrices[VR_SIDE_RIGHT]);
+		// Invert the current controller matrix in order to achieve inverse transformation
+		invert_m4_m4(navInvMatrix, navMatrix);
+		// Get delta
+		mul_m4_m4m4(deltaMatrix, m_touchPrevMatrices[VR_SIDE_RIGHT], navInvMatrix);
 
-			// Apply delta to menu matrix
-			invert_m4(deltaMatrix);
-			mul_m4_m4m4(menuMatrix, deltaMatrix, m_menuPrevMatrix);
-			menu->setMatrix(menuMatrix);
+		// Apply delta to menu matrix
+		invert_m4(deltaMatrix);
+		mul_m4_m4m4(menuMatrix, deltaMatrix, m_menuPrevMatrix);
+
+		// Apply Thumbstick movement only if Hit distance is in range
+		float hitDistance = m_hitResult[VR_SIDE_RIGHT].m_dist;
+		float currRThumbstickUpDown = m_currentState[VR_SIDE_RIGHT].mThumbstick[1];
+
+		if ((currRThumbstickUpDown > 0 && hitDistance < VR_MENU_MOVE_DIST_MAX) || (currRThumbstickUpDown < 0 && hitDistance > VR_MENU_MOVE_DIST_MIN)) {
+			float moveDelta[3];
+			unit_m4(moveMatrix);
+			copy_v3_v3(moveDelta, m_hitResult[VR_SIDE_RIGHT].m_rayDir);
+			mul_v3_fl(moveDelta, currRThumbstickUpDown);
+			translate_m4(moveMatrix, moveDelta[0], moveDelta[1], moveDelta[2]);
+			mul_m4_m4_pre(menuMatrix, moveMatrix);
 		}
+
+		menu->setMatrix(menuMatrix);
+
+		// Store current navigation for next iteration
+		copy_m4_m4(m_touchPrevMatrices[VR_SIDE_RIGHT], m_touchMatrices[VR_SIDE_RIGHT]);
+		//copy_m4_m4(m_touchPrevMatrices[VR_SIDE_LEFT], m_touchMatrices[VR_SIDE_LEFT]);
+		copy_m4_m4(m_menuPrevMatrix, menuMatrix);
 	}
 }
 
@@ -413,7 +441,7 @@ void VR_UI_Manager::processGhostEvents(bContext *C)
 	pushGhostEvent(new VR_GHOST_EventVRMotion(VR_GHOST_kEventVRMotion, coords3d[0], coords3d[1], coords3d[2]));
 
 	// EventCursor
-	getScreenCoordinates(sidePrimary, coords2d);
+	getTouchScreenCoordinates(sidePrimary, coords2d);
 	if (coords2d[0] >= 0.0f && coords2d[0] <= 1.0f && coords2d[1] >= 0.0f && coords2d[1] <= 1.0f) {
 		// We need to flip y coordinate and calculate inverse offsets because Blender measures from bottom to top and GHOST from top to bottom
 		float ymin = m_bWindow->sizey - m_bARegion->winrct.ymax;
@@ -617,6 +645,7 @@ void VR_UI_Manager::computeTouchControllerRay(unsigned int side, VR_Space space,
 	rayDir[0] = 0.0f; rayDir[1] = 0.0f; rayDir[2] = -1.0f;
 	// This multiplication only apply rotation
 	mul_mat3_m4_v3(touchMatrix, rayDir);
+	normalize_v3(rayDir);
 }
 
 void VR_UI_Manager::getNavMatrix(float matrix[4][4], bool scaled)
