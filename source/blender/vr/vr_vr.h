@@ -110,6 +110,9 @@ struct VR_GHOST_Event* vr_ghost_event_pop();
 /// Removes the oldest ghost event
 void vr_ghost_event_clear();
 
+/// Get Viewport scale
+float vr_view_scale_get();
+
 
 #ifdef __cplusplus
 }

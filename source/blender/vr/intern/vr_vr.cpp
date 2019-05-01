@@ -418,6 +418,11 @@ int vr_get_eye_texture_size(int *width, int *height)
 	return 1;
 }
 
+float vr_view_scale_get()
+{
+	return vrUiManager->getNavScale();
+}
+
 int vr_shutdown()
 {
 	DRW_VR_shape_cache_free();

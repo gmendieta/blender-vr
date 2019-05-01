@@ -1,5 +1,7 @@
 #include "vr_op_gpencil.h"
 
+#include "vr_vr.h"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -257,6 +259,10 @@ int VR_OP_GPencil::addStroke(bContext *C)
 		/* calculate UVs along the stroke */
 		ED_gpencil_calc_stroke_uv(ob, gps);
 		
+		// Convert all the points to GP object space
+		for (int i = 0; i < totpoints; ++i) {
+			mul_v3_m4v3(&m_points[i].x, ob->imat, &m_points[i].x);
+		}
 		memcpy(gps->points, m_points.data(), totpoints * sizeof(bGPDspoint));
 
 		/* post process stroke */
@@ -340,10 +346,12 @@ void VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 		gp_style = BKE_material_gpencil_settings_get(ob, ob->actcol);
 	}
 
-	sthickness = brush->size * obscale;
+	float vr_scale = vr_view_scale_get();
+
+	sthickness = brush->size * obscale / vr_scale;
 	copy_v4_v4(ink, gp_style->stroke_rgba);
 
-	// TODO Draw depending on GP options
+	// Draw volumetric points
 	gp_draw_stroke_volumetric_3d(m_points.data(), totpoints, sthickness, ink);
 }
 
