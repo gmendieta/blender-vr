@@ -168,7 +168,8 @@ bool ED_view3d_viewplane_get(Depsgraph *depsgraph,
   BKE_camera_params_init(&params);
   BKE_camera_params_from_view3d(&params, depsgraph, v3d, rv3d);
 #ifdef WITH_VR
-	if (rv3d->rflag & RV3D_VR) {
+  ARegion *ar_vr = vr_region_get();
+	if (ar_vr && ar_vr->regiondata == rv3d) {
 		vr_camera_params_compute_viewplane(v3d, &params, winx, winy, 1.0f, 1.0f);
 	}
 	else {

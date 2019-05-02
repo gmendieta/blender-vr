@@ -853,7 +853,8 @@ void view3d_viewmatrix_set(Depsgraph *depsgraph,
     else {
 #ifdef WITH_VR
 			/* We dont want to modify Blender standard behaviour, so if the camera is set to an object or to cursor we just let it be */
-			if (rv3d->rflag & RV3D_VR) {
+      ARegion *ar_vr = vr_region_get();
+			if (ar_vr && ar_vr->regiondata == rv3d) {
 				vr_view_matrix_compute(v3d->multiview_eye, rv3d->viewmat);
 			}
 			else {

@@ -165,7 +165,6 @@ void vr_create_viewports(struct ARegion *ar)
 		if (rv3d) {
 			rv3d->is_persp = 1;
 			rv3d->persp = RV3D_PERSP;
-			rv3d->rflag |= RV3D_VR;
 		}
 	}
 }

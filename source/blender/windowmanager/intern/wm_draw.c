@@ -147,10 +147,9 @@ static bool wm_draw_region_stereo_set(Main *bmain, ScrArea *sa, ARegion *ar, eSt
         View3D *v3d = sa->spacedata.first;
 
 #ifdef WITH_VR
-			RegionView3D *rv3d = ar->regiondata;
-			if (rv3d->rflag & RV3D_VR)
+      ARegion *ar_vr = vr_region_get();
+			if (ar == ar_vr)
 			{
-				v3d->stereo3d_flag |= V3D_S3D_DISPVR;
 				// Hide Text, Cursor and vavitation Gizmo
 				v3d->overlay.flag |= V3D_OVERLAY_HIDE_TEXT | V3D_OVERLAY_HIDE_CURSOR;
 				v3d->gizmo_flag |= V3D_GIZMO_HIDE_NAVIGATE;
@@ -293,10 +292,8 @@ static void wm_draw_region_buffer_free(ARegion *ar)
 {
 
 #ifdef WITH_VR
-	RegionView3D *rv3d = ar->regiondata;
 	ARegion *ar_vr = vr_region_get();
-	// We store the first RegionView3D found in the VR window because rv3d->rflag gives false positives because initialization
-	if (ar == ar_vr && rv3d && rv3d->rflag & RV3D_VR) {
+	if (ar == ar_vr) {
 		vr_free_viewports(ar);
 	}
 #endif

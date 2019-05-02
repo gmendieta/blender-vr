@@ -1591,7 +1591,8 @@ void DRW_draw_render_loop_ex(struct Depsgraph *depsgraph,
   DRW_hair_update();
 
 #ifdef WITH_VR
-  if (rv3d->rflag & RV3D_VR) {
+  ARegion *ar_vr = vr_region_get();
+  if (ar == ar_vr) {
     uint view = v3d->multiview_eye;
     vr_set_view_matrix(view, rv3d->viewmat);
     vr_set_projection_matrix(view, rv3d->winmat);
@@ -1628,7 +1629,7 @@ void DRW_draw_render_loop_ex(struct Depsgraph *depsgraph,
   drw_engines_draw_scene();
 
 #ifdef WITH_VR
-  if (rv3d->rflag & RV3D_VR) {
+  if (ar == ar_vr) {
     uint view = v3d->multiview_eye;
     vr_region_do_post_draw(evil_C, view);
   }
