@@ -29,12 +29,14 @@ extern "C"
 #include "DEG_depsgraph.h"
 #include "DEG_depsgraph_query.h"
 
+#include "ED_undo.h"
 #include "ED_gpencil.h"
-#include "gpencil_intern.h"
 
 #include "GPU_immediate.h"
 #include "GPU_state.h"
 #include "GPU_draw.h"
+
+#include "gpencil_intern.h"
 
 // enum copied from gpencil_paint.c
 /* values for tGPsdata->status */
@@ -231,6 +233,7 @@ int VR_OP_GPencil::addStroke(bContext *C)
 	}
 
 	Depsgraph *depsgraph = CTX_data_depsgraph(C);
+	Scene *scene = CTX_data_scene(C);
 	Object *ob = CTX_data_active_object(C);
 	bGPdata *gpd = ED_gpencil_data_get_active(C);
 	bGPDlayer *gpl = CTX_data_active_gpencil_layer(C);
@@ -310,9 +313,14 @@ int VR_OP_GPencil::addStroke(bContext *C)
 			BKE_gpencil_trim_stroke(gps);
 		}
 
+		// Store the Undo
+		ED_undo_push(C, "Grease Pencil VR Draw");
+
 		/* update depsgraph */
 		DEG_id_tag_update(&gpd->id, ID_RECALC_TRANSFORM | ID_RECALC_GEOMETRY);
 		gpd->flag |= GP_DATA_CACHE_IS_DIRTY;
+
+		DEG_id_tag_update(&scene->id, ID_RECALC_COPY_ON_WRITE);
 	}
 
 	m_points.clear();

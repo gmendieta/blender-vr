@@ -15,13 +15,16 @@ extern "C"
 #include "vr_draw_cache.h"
 #include "draw_cache.h"
 
+#include "DNA_windowmanager_types.h"
+
 #include "BKE_context.h"
-#include "ED_undo.h"
 
 #include "BLI_math_matrix.h"
 #include "BLI_math_vector.h"
 
-#include "DNA_windowmanager_types.h"
+#include "WM_api.h"
+#include "WM_types.h"
+
 #include "GPU_framebuffer.h"
 #include "GPU_texture.h"
 #include "GPU_batch.h"
@@ -355,7 +358,6 @@ void VR_UI_Manager::processGhostEvents(bContext *C)
 		return;
 	}
 
-	/*
 	// Undo and Redo
 	bool currThumbstickSwipeLeft = m_currentState[sideSecondary].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
 	bool prevThumbstickSwipeLeft = m_previousState[sideSecondary].mButtons & VR_THUMBSTICK_SWIPE_LEFT;
@@ -363,12 +365,11 @@ void VR_UI_Manager::processGhostEvents(bContext *C)
 	bool prevThumbstickSwipeRight = m_previousState[sideSecondary].mButtons & VR_THUMBSTICK_SWIPE_RIGHT;
 
 	if (currThumbstickSwipeLeft && !prevThumbstickSwipeLeft) {
-		ED_undo_pop(C);
+		WM_operator_name_call(C, "ED_OT_undo", WM_OP_EXEC_DEFAULT, NULL);
 	}
 	else if (currThumbstickSwipeRight && !prevThumbstickSwipeRight) {
-		ED_undo_redo(C);
+		WM_operator_name_call(C, "ED_OT_redo", WM_OP_EXEC_DEFAULT, NULL);
 	}
-	*/
 
 	bool currIndexTriggerDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
 	bool prevIndexTriggerDown = m_previousState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
