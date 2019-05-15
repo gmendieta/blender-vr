@@ -525,6 +525,22 @@ static char *rna_ColorManagedViewSettings_path(PointerRNA *UNUSED(ptr))
   return BLI_strdup("view_settings");
 }
 
+static bool rna_ColorManagedColorspaceSettings_is_data_get(struct PointerRNA *ptr)
+{
+  ColorManagedColorspaceSettings *colorspace = (ColorManagedColorspaceSettings *)ptr->data;
+  const char *data_name = IMB_colormanagement_role_colorspace_name_get(COLOR_ROLE_DATA);
+  return STREQ(colorspace->name, data_name);
+}
+
+static void rna_ColorManagedColorspaceSettings_is_data_set(struct PointerRNA *ptr, bool value)
+{
+  ColorManagedColorspaceSettings *colorspace = (ColorManagedColorspaceSettings *)ptr->data;
+  if (value) {
+    const char *data_name = IMB_colormanagement_role_colorspace_name_get(COLOR_ROLE_DATA);
+    STRNCPY(colorspace->name, data_name);
+  }
+}
+
 static int rna_ColorManagedColorspaceSettings_colorspace_get(struct PointerRNA *ptr)
 {
   ColorManagedColorspaceSettings *colorspace = (ColorManagedColorspaceSettings *)ptr->data;
@@ -577,10 +593,6 @@ static void rna_ColorManagedColorspaceSettings_reload_update(Main *bmain,
 
     BKE_movieclip_reload(bmain, clip);
 
-    /* all sequencers for now, we don't know which scenes are using this clip as a strip */
-    BKE_sequencer_cache_cleanup();
-    BKE_sequencer_preprocessed_cache_cleanup();
-
     WM_main_add_notifier(NC_MOVIECLIP | ND_DISPLAY, &clip->id);
     WM_main_add_notifier(NC_MOVIECLIP | NA_EDITED, &clip->id);
   }
@@ -612,21 +624,19 @@ static void rna_ColorManagedColorspaceSettings_reload_update(Main *bmain,
         }
 
         BKE_sequence_invalidate_cache(scene, seq);
-        BKE_sequencer_preprocessed_cache_cleanup_sequence(seq);
       }
       else {
         SEQ_BEGIN (scene->ed, seq) {
           BKE_sequence_free_anim(seq);
         }
         SEQ_END;
-
-        BKE_sequencer_cache_cleanup();
-        BKE_sequencer_preprocessed_cache_cleanup();
       }
 
       WM_main_add_notifier(NC_SCENE | ND_SEQUENCER, NULL);
     }
   }
+
+  BKE_sequencer_cache_cleanup_all(bmain);
 }
 
 static char *rna_ColorManagedSequencerColorspaceSettings_path(PointerRNA *UNUSED(ptr))
@@ -1233,6 +1243,7 @@ static void rna_def_colormanage(BlenderRNA *brna)
 
   prop = RNA_def_property(srna, "name", PROP_ENUM, PROP_NONE);
   RNA_def_property_flag(prop, PROP_ENUM_NO_CONTEXT);
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
   RNA_def_property_enum_items(prop, color_space_items);
   RNA_def_property_enum_funcs(prop,
                               "rna_ColorManagedColorspaceSettings_colorspace_get",
@@ -1240,6 +1251,17 @@ static void rna_def_colormanage(BlenderRNA *brna)
                               "rna_ColorManagedColorspaceSettings_colorspace_itemf");
   RNA_def_property_ui_text(prop, "Input Color Space", "Color space of the image or movie on disk");
   RNA_def_property_update(prop, NC_WINDOW, "rna_ColorManagedColorspaceSettings_reload_update");
+
+  prop = RNA_def_property(srna, "is_data", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_boolean_funcs(prop,
+                                 "rna_ColorManagedColorspaceSettings_is_data_get",
+                                 "rna_ColorManagedColorspaceSettings_is_data_set");
+  RNA_def_property_ui_text(
+      prop,
+      "Is Data",
+      "Treat image as non-color data without color management, like normal or displacement maps");
+  RNA_def_property_update(prop, NC_WINDOW, "rna_ColorManagement_update");
 
   //
   srna = RNA_def_struct(brna, "ColorManagedSequencerColorspaceSettings", NULL);

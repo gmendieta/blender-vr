@@ -141,10 +141,12 @@ int EEVEE_depth_of_field_init(EEVEE_ViewLayerData *UNUSED(sldata),
       float focus_dist = BKE_camera_object_dof_distance(camera);
       float focal_len = cam->lens;
 
-      /* this is factor that converts to the scene scale. focal length and sensor are expressed in mm
-       * unit.scale_length is how many meters per blender unit we have. We want to convert to blender units though
-       * because the shader reads coordinates in world space, which is in blender units.
-       * Note however that focus_distance is already in blender units and shall not be scaled here (see T48157). */
+      /* this is factor that converts to the scene scale. focal length and sensor are expressed in
+       * mm unit.scale_length is how many meters per blender unit we have. We want to convert to
+       * blender units though because the shader reads coordinates in world space, which is in
+       * blender units.
+       * Note however that focus_distance is already in blender units and shall not be scaled here
+       * (see T48157). */
       float scale = (scene_eval->unit.system) ? scene_eval->unit.scale_length : 1.0f;
       float scale_camera = 0.001f / scale;
       /* we want radius here for the aperture number  */
@@ -210,7 +212,7 @@ void EEVEE_depth_of_field_cache_init(EEVEE_ViewLayerData *UNUSED(sldata), EEVEE_
     DRW_shgroup_uniform_texture_ref(grp, "depthBuffer", &dtxl->depth);
     DRW_shgroup_uniform_vec2(grp, "nearFar", effects->dof_near_far, 1);
     DRW_shgroup_uniform_vec2(grp, "dofParams", effects->dof_params, 1);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
 
     psl->dof_scatter = DRW_pass_create("DoF Scatter",
                                        DRW_STATE_WRITE_COLOR | DRW_STATE_ADDITIVE_FULL);
@@ -220,12 +222,13 @@ void EEVEE_depth_of_field_cache_init(EEVEE_ViewLayerData *UNUSED(sldata), EEVEE_
     const float *viewport_size = DRW_viewport_size_get();
     const int sprite_len = ((int)viewport_size[0] / 2) *
                            ((int)viewport_size[1] / 2); /* brackets matters */
-    grp = DRW_shgroup_empty_tri_batch_create(
-        e_data.dof_scatter_sh[use_alpha], psl->dof_scatter, sprite_len);
+    grp = DRW_shgroup_create(e_data.dof_scatter_sh[use_alpha], psl->dof_scatter);
     DRW_shgroup_uniform_texture_ref(grp, "nearBuffer", &effects->dof_down_near);
     DRW_shgroup_uniform_texture_ref(grp, "farBuffer", &effects->dof_down_far);
     DRW_shgroup_uniform_texture_ref(grp, "cocBuffer", &effects->dof_coc);
     DRW_shgroup_uniform_vec4(grp, "bokehParams", effects->dof_bokeh, 2);
+
+    DRW_shgroup_call_procedural_triangles(grp, sprite_len, NULL);
 
     psl->dof_resolve = DRW_pass_create("DoF Resolve", DRW_STATE_WRITE_COLOR);
 
@@ -235,10 +238,11 @@ void EEVEE_depth_of_field_cache_init(EEVEE_ViewLayerData *UNUSED(sldata), EEVEE_
     DRW_shgroup_uniform_texture_ref(grp, "depthBuffer", &dtxl->depth);
     DRW_shgroup_uniform_vec2(grp, "nearFar", effects->dof_near_far, 1);
     DRW_shgroup_uniform_vec2(grp, "dofParams", effects->dof_params, 1);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
 
     if (use_alpha) {
       DRW_shgroup_uniform_texture_ref(grp, "scatterAlphaBuffer", &effects->dof_blur_alpha);
+      DRW_shgroup_uniform_bool_copy(grp, "unpremult", DRW_state_is_image_render());
     }
   }
 }

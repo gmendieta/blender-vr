@@ -100,6 +100,8 @@ bool BKE_object_is_mode_compat(const struct Object *ob, eObjectMode object_mode)
 
 bool BKE_object_data_is_in_editmode(const struct ID *id);
 
+void BKE_object_update_select_id(struct Main *bmain);
+
 typedef enum eObjectVisibilityResult {
   OB_VISIBLE_SELF = 1,
   OB_VISIBLE_PARTICLES = 2,
@@ -153,7 +155,7 @@ struct Object *BKE_object_duplicate(struct Main *bmain,
 void BKE_object_obdata_size_init(struct Object *ob, const float scale);
 
 void BKE_object_scale_to_mat3(struct Object *ob, float mat[3][3]);
-void BKE_object_rot_to_mat3(struct Object *ob, float mat[3][3], bool use_drot);
+void BKE_object_rot_to_mat3(const struct Object *ob, float mat[3][3], bool use_drot);
 void BKE_object_mat3_to_rot(struct Object *ob, float mat[3][3], bool use_compat);
 void BKE_object_to_mat3(struct Object *ob, float mat[3][3]);
 void BKE_object_to_mat4(struct Object *ob, float mat[4][4]);

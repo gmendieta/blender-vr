@@ -745,7 +745,6 @@ class CYCLES_RENDER_PT_override(CyclesButtonsPanel, Panel):
 class CYCLES_RENDER_PT_passes(CyclesButtonsPanel, Panel):
     bl_label = "Passes"
     bl_context = "view_layer"
-    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
         pass
@@ -1342,8 +1341,14 @@ class CYCLES_LIGHT_PT_light(CyclesButtonsPanel, Panel):
 
         col = layout.column()
 
-        if light.type in {'POINT', 'SUN', 'SPOT'}:
+        col.prop(light, "color")
+        col.prop(light, "energy")
+        col.separator()
+
+        if light.type in {'POINT', 'SPOT'}:
             col.prop(light, "shadow_soft_size", text="Size")
+        elif light.type == 'SUN':
+            col.prop(light, "angle")
         elif light.type == 'AREA':
             col.prop(light, "shape", text="Shape")
             sub = col.column(align=True)
@@ -1385,8 +1390,7 @@ class CYCLES_LIGHT_PT_nodes(CyclesButtonsPanel, Panel):
         layout = self.layout
 
         light = context.light
-        if not panel_node_draw(layout, light, 'OUTPUT_LIGHT', 'Surface'):
-            layout.prop(light, "color")
+        panel_node_draw(layout, light, 'OUTPUT_LIGHT', 'Surface')
 
 
 class CYCLES_LIGHT_PT_spot(CyclesButtonsPanel, Panel):
@@ -2131,13 +2135,13 @@ classes = (
     CYCLES_RENDER_PT_performance_acceleration_structure,
     CYCLES_RENDER_PT_performance_final_render,
     CYCLES_RENDER_PT_performance_viewport,
-    CYCLES_RENDER_PT_filter,
-    CYCLES_RENDER_PT_override,
     CYCLES_RENDER_PT_passes,
     CYCLES_RENDER_PT_passes_data,
     CYCLES_RENDER_PT_passes_light,
     CYCLES_RENDER_PT_passes_crypto,
     CYCLES_RENDER_PT_passes_debug,
+    CYCLES_RENDER_PT_filter,
+    CYCLES_RENDER_PT_override,
     CYCLES_RENDER_PT_denoising,
     CYCLES_PT_post_processing,
     CYCLES_CAMERA_PT_dof,

@@ -2213,7 +2213,7 @@ static int wm_handler_operator_call(bContext *C,
           wm_event_free_handler(&handler->head);
 
           /* prevent silly errors from operator users */
-          //retval &= ~OPERATOR_PASS_THROUGH;
+          // retval &= ~OPERATOR_PASS_THROUGH;
         }
       }
     }

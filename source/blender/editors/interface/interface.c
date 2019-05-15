@@ -1299,10 +1299,10 @@ static bool ui_but_event_property_operator_string(const bContext *C,
         }
       }
       else {
-        //puts("other id");
+        // puts("other id");
       }
 
-      //printf("prop shortcut: '%s' (%s)\n", RNA_property_identifier(prop), data_path);
+      // printf("prop shortcut: '%s' (%s)\n", RNA_property_identifier(prop), data_path);
     }
 
     /* we have a datapath! */
@@ -1615,7 +1615,7 @@ void ui_fontscale(short *points, float aspect)
 
     /* for some reason scaling fonts goes too fast compared to widget size */
     /* XXX not true anymore? (ton) */
-    //aspect = sqrt(aspect);
+    // aspect = sqrt(aspect);
     pointsf /= aspect;
 
     if (aspect > 1.0f) {
@@ -3233,6 +3233,11 @@ uiBlock *UI_block_begin(const bContext *C, ARegion *region, const char *name, sh
   }
 
   return block;
+}
+
+char UI_block_emboss_get(uiBlock *block)
+{
+  return block->dt;
 }
 
 void UI_block_emboss_set(uiBlock *block, char dt)

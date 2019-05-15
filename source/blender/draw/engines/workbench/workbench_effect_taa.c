@@ -90,26 +90,36 @@ int workbench_taa_calculate_num_iterations(WORKBENCH_Data *vedata)
 {
   WORKBENCH_StorageList *stl = vedata->stl;
   WORKBENCH_PrivateData *wpd = stl->g_data;
-  int result = 1;
-  if (TAA_ENABLED(wpd)) {
+  const Scene *scene = DRW_context_state_get()->scene;
+  int result;
+  if (workbench_is_taa_enabled(wpd)) {
     if (DRW_state_is_image_render()) {
-      const Scene *scene = DRW_context_state_get()->scene;
-      result = (scene->r.mode & R_OSA) ? scene->r.osa : 1;
-    }
-    else if (IN_RANGE_INCL(wpd->preferences->gpu_viewport_quality,
-                           GPU_VIEWPORT_QUALITY_TAA8,
-                           GPU_VIEWPORT_QUALITY_TAA16)) {
-      result = 8;
-    }
-    else if (IN_RANGE_INCL(wpd->preferences->gpu_viewport_quality,
-                           GPU_VIEWPORT_QUALITY_TAA16,
-                           GPU_VIEWPORT_QUALITY_TAA32)) {
-      result = 16;
+      const DRWContextState *draw_ctx = DRW_context_state_get();
+      if (draw_ctx->v3d) {
+        result = scene->display.viewport_aa;
+      }
+      else {
+        result = scene->display.render_aa;
+      }
     }
     else {
-      result = 32;
+      result = wpd->preferences->viewport_aa;
     }
   }
+  else {
+    /* when no TAA is disabled return 1 to render a single sample
+     * see `workbench_render.c` */
+    result = 1;
+  }
+  return result;
+}
+
+int workbench_num_viewport_rendering_iterations(WORKBENCH_Data *UNUSED(vedata))
+{
+  const DRWContextState *draw_ctx = DRW_context_state_get();
+  const Scene *scene = draw_ctx->scene;
+  int result = DRW_state_is_image_render() ? scene->display.viewport_aa : 1;
+  result = MAX2(result, 1);
   return result;
 }
 
@@ -191,7 +201,7 @@ DRWPass *workbench_taa_create_pass(WORKBENCH_Data *vedata, GPUTexture **color_bu
   DRW_shgroup_uniform_texture_ref(grp, "colorBuffer", color_buffer_tx);
   DRW_shgroup_uniform_texture_ref(grp, "historyBuffer", &txl->history_buffer_tx);
   DRW_shgroup_uniform_float(grp, "mixFactor", &effect_info->taa_mix_factor, 1);
-  DRW_shgroup_call_add(grp, DRW_cache_fullscreen_quad_get(), NULL);
+  DRW_shgroup_call(grp, DRW_cache_fullscreen_quad_get(), NULL);
 
   /*
    * Set the offset for the cavity shader so every iteration different

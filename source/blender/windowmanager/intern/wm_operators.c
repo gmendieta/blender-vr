@@ -872,7 +872,7 @@ int WM_enum_search_invoke_previews(bContext *C, wmOperator *op, short prv_cols, 
   search_menu.prv_cols = prv_cols;
   search_menu.prv_rows = prv_rows;
 
-  UI_popup_block_invoke(C, wm_enum_search_menu, &search_menu);
+  UI_popup_block_invoke(C, wm_enum_search_menu, &search_menu, NULL);
 
   return OPERATOR_INTERFACE;
 }
@@ -881,13 +881,17 @@ int WM_enum_search_invoke(bContext *C, wmOperator *op, const wmEvent *UNUSED(eve
 {
   static struct EnumSearchMenu search_menu;
   search_menu.op = op;
-  UI_popup_block_invoke(C, wm_enum_search_menu, &search_menu);
+  UI_popup_block_invoke(C, wm_enum_search_menu, &search_menu, NULL);
   return OPERATOR_INTERFACE;
 }
 
 /* Can't be used as an invoke directly, needs message arg (can be NULL) */
-int WM_operator_confirm_message_ex(
-    bContext *C, wmOperator *op, const char *title, const int icon, const char *message)
+int WM_operator_confirm_message_ex(bContext *C,
+                                   wmOperator *op,
+                                   const char *title,
+                                   const int icon,
+                                   const char *message,
+                                   const short opcontext)
 {
   uiPopupMenu *pup;
   uiLayout *layout;
@@ -902,8 +906,7 @@ int WM_operator_confirm_message_ex(
 
   pup = UI_popup_menu_begin(C, title, icon);
   layout = UI_popup_menu_layout(pup);
-  uiItemFullO_ptr(
-      layout, op->type, message, ICON_NONE, properties, WM_OP_EXEC_REGION_WIN, 0, NULL);
+  uiItemFullO_ptr(layout, op->type, message, ICON_NONE, properties, opcontext, 0, NULL);
   UI_popup_menu_end(C, pup);
 
   return OPERATOR_INTERFACE;
@@ -911,7 +914,8 @@ int WM_operator_confirm_message_ex(
 
 int WM_operator_confirm_message(bContext *C, wmOperator *op, const char *message)
 {
-  return WM_operator_confirm_message_ex(C, op, IFACE_("OK?"), ICON_QUESTION, message);
+  return WM_operator_confirm_message_ex(
+      C, op, IFACE_("OK?"), ICON_QUESTION, message, WM_OP_EXEC_REGION_WIN);
 }
 
 int WM_operator_confirm(bContext *C, wmOperator *op, const wmEvent *UNUSED(event))
@@ -1160,8 +1164,8 @@ static void dialog_exec_cb(bContext *C, void *arg1, void *arg2)
   WM_operator_call_ex(C, data->op, true);
 
   /* let execute handle freeing it */
-  //data->free_op = false;
-  //data->op = NULL;
+  // data->free_op = false;
+  // data->op = NULL;
 
   /* in this case, wm_operator_ui_popup_cancel wont run */
   MEM_freeN(data);
@@ -1400,7 +1404,7 @@ int WM_operator_redo_popup(bContext *C, wmOperator *op)
     return OPERATOR_CANCELLED;
   }
 
-  UI_popup_block_invoke(C, wm_block_create_redo, op);
+  UI_popup_block_invoke(C, wm_block_create_redo, op, NULL);
 
   return OPERATOR_CANCELLED;
 }
@@ -1712,7 +1716,7 @@ static uiBlock *wm_block_create_splash(bContext *C, ARegion *ar, void *UNUSED(ar
 
 static int wm_splash_invoke(bContext *C, wmOperator *UNUSED(op), const wmEvent *UNUSED(event))
 {
-  UI_popup_block_invoke(C, wm_block_create_splash, NULL);
+  UI_popup_block_invoke(C, wm_block_create_splash, NULL, NULL);
 
   return OPERATOR_FINISHED;
 }
@@ -1818,7 +1822,7 @@ static int wm_search_menu_invoke(bContext *C, wmOperator *UNUSED(op), const wmEv
   data.size[0] = UI_searchbox_size_x() * 2;
   data.size[1] = UI_searchbox_size_y();
 
-  UI_popup_block_invoke(C, wm_block_search_menu, &data);
+  UI_popup_block_invoke(C, wm_block_search_menu, &data, NULL);
 
   return OPERATOR_INTERFACE;
 }
@@ -3519,6 +3523,8 @@ void wm_operatortypes_register(void)
   WM_operatortype_append(WM_OT_read_factory_settings);
   WM_operatortype_append(WM_OT_save_homefile);
   WM_operatortype_append(WM_OT_save_userpref);
+  WM_operatortype_append(WM_OT_read_userpref);
+  WM_operatortype_append(WM_OT_read_factory_userpref);
   WM_operatortype_append(WM_OT_userpref_autoexec_path_add);
   WM_operatortype_append(WM_OT_userpref_autoexec_path_remove);
   WM_operatortype_append(WM_OT_window_fullscreen_toggle);

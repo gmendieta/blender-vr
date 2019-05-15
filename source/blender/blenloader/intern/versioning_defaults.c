@@ -68,6 +68,11 @@ void BLO_update_defaults_userpref_blend(void)
   U.flag &= ~USER_SCRIPT_AUTOEXEC_DISABLE;
 #endif
 
+  /* Transform tweak with single click and drag. */
+  U.flag |= USER_RELEASECONFIRM;
+
+  U.flag &= ~(USER_DEVELOPER_UI | USER_TOOLTIPS_PYTHON);
+
   /* Clear addon preferences. */
   for (bAddon *addon = U.addons.first, *addon_next; addon != NULL; addon = addon_next) {
     addon_next = addon->next;
@@ -78,9 +83,6 @@ void BLO_update_defaults_userpref_blend(void)
       addon->prop = NULL;
     }
   }
-
-  /* Transform tweak with single click and drag. */
-  U.flag |= USER_RELEASECONFIRM;
 
   /* Ignore the theme saved in the blend file,
    * instead use the theme from 'userdef_default_theme.c' */
@@ -279,14 +281,75 @@ void BLO_update_defaults_startup_blend(Main *bmain, const char *app_template)
     }
 
     for (bScreen *screen = bmain->screens.first; screen; screen = screen->id.next) {
-      /* Hide channels in timelines. */
       for (ScrArea *sa = screen->areabase.first; sa; sa = sa->next) {
-        SpaceAction *saction = (sa->spacetype == SPACE_ACTION) ? sa->spacedata.first : NULL;
+        if (sa->spacetype == SPACE_ACTION) {
+          /* Show marker lines, hide channels and collapse summary in timelines. */
+          SpaceAction *saction = sa->spacedata.first;
+          saction->flag |= SACTION_SHOW_MARKER_LINES;
 
-        if (saction && saction->mode == SACTCONT_TIMELINE) {
-          for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
-            if (ar->regiontype == RGN_TYPE_CHANNELS) {
-              ar->flag |= RGN_FLAG_HIDDEN;
+          if (saction->mode == SACTCONT_TIMELINE) {
+            saction->ads.flag |= ADS_FLAG_SUMMARY_COLLAPSED;
+
+            for (ARegion *ar = sa->regionbase.first; ar; ar = ar->next) {
+              if (ar->regiontype == RGN_TYPE_CHANNELS) {
+                ar->flag |= RGN_FLAG_HIDDEN;
+              }
+            }
+          }
+        }
+        else if (sa->spacetype == SPACE_GRAPH) {
+          SpaceGraph *sipo = sa->spacedata.first;
+          sipo->flag |= SIPO_MARKER_LINES;
+        }
+        else if (sa->spacetype == SPACE_NLA) {
+          SpaceNla *snla = sa->spacedata.first;
+          snla->flag |= SNLA_SHOW_MARKER_LINES;
+        }
+        else if (sa->spacetype == SPACE_TEXT) {
+          /* Show syntax and line numbers in Script workspace text editor. */
+          SpaceText *stext = sa->spacedata.first;
+          stext->showsyntax = true;
+          stext->showlinenrs = true;
+        }
+        else if (sa->spacetype == SPACE_VIEW3D) {
+          /* Screen space cavity by default for faster performance. */
+          View3D *v3d = sa->spacedata.first;
+          v3d->shading.cavity_type = V3D_SHADING_CAVITY_CURVATURE;
+        }
+        else if (sa->spacetype == SPACE_CLIP) {
+          SpaceClip *sclip = sa->spacedata.first;
+          sclip->around = V3D_AROUND_CENTER_MEDIAN;
+        }
+      }
+    }
+
+    /* Show toopbar for sculpt/paint modes. */
+    for (bScreen *screen = bmain->screens.first; screen; screen = screen->id.next) {
+      bool show_tool_header = false;
+      if (app_template == NULL) {
+        if (STR_ELEM(screen->id.name + 2, "Sculpting", "Texture Paint")) {
+          show_tool_header = true;
+        }
+      }
+      else if (STREQ(app_template, "2D_Animation")) {
+        if (STR_ELEM(screen->id.name + 2, "2D Animation", "2D Full Canvas")) {
+          show_tool_header = true;
+        }
+      }
+      else if (STREQ(app_template, "Sculpting")) {
+        if (STR_ELEM(screen->id.name + 2, "Sculpting")) {
+          show_tool_header = true;
+        }
+      }
+
+      if (show_tool_header) {
+        for (ScrArea *sa = screen->areabase.first; sa; sa = sa->next) {
+          for (SpaceLink *sl = sa->spacedata.first; sl; sl = sl->next) {
+            ListBase *regionbase = (sl == sa->spacedata.first) ? &sa->regionbase : &sl->regionbase;
+            for (ARegion *ar = regionbase->first; ar; ar = ar->next) {
+              if (ar->regiontype == RGN_TYPE_TOOL_HEADER) {
+                ar->flag &= ~(RGN_FLAG_HIDDEN | RGN_FLAG_HIDDEN_BY_USER);
+              }
             }
           }
         }
@@ -352,6 +415,13 @@ void BLO_update_defaults_startup_blend(Main *bmain, const char *app_template)
     copy_v3_v3(scene->display.light_direction, (float[3]){M_SQRT1_3, M_SQRT1_3, M_SQRT1_3});
     copy_v2_fl2(scene->safe_areas.title, 0.1f, 0.05f);
     copy_v2_fl2(scene->safe_areas.action, 0.035f, 0.035f);
+  }
+
+  if (app_template == NULL) {
+    /* Enable for UV sculpt (other brush types will be created as needed),
+     * without this the grab brush will be active but not selectable from the list. */
+    Brush *brush = BLI_findstring(&bmain->brushes, "Grab", offsetof(ID, name) + 2);
+    brush->ob_mode |= OB_MODE_EDIT;
   }
 
   for (Brush *brush = bmain->brushes.first; brush; brush = brush->id.next) {

@@ -243,9 +243,10 @@ void workbench_dof_engine_init(WORKBENCH_Data *vedata, Object *camera)
     /* TODO(fclem) deduplicate with eevee */
 
     /* this is factor that converts to the scene scale. focal length and sensor are expressed in mm
-     * unit.scale_length is how many meters per blender unit we have. We want to convert to blender units though
-     * because the shader reads coordinates in world space, which is in blender units.
-     * Note however that focus_distance is already in blender units and shall not be scaled here (see T48157). */
+     * unit.scale_length is how many meters per blender unit we have. We want to convert to blender
+     * units though because the shader reads coordinates in world space, which is in blender units.
+     * Note however that focus_distance is already in blender units and shall not be scaled here
+     * (see T48157). */
     float scale = (scene_eval->unit.system) ? scene_eval->unit.scale_length : 1.0f;
     float scale_camera = 0.001f / scale;
     /* we want radius here for the aperture number  */
@@ -313,37 +314,37 @@ void workbench_dof_create_pass(WORKBENCH_Data *vedata,
     DRW_shgroup_uniform_vec2(grp, "invertedViewportSize", DRW_viewport_invert_size_get(), 1);
     DRW_shgroup_uniform_vec3(grp, "dofParams", &wpd->dof_aperturesize, 1);
     DRW_shgroup_uniform_vec2(grp, "nearFar", wpd->dof_near_far, 1);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
 
   {
     DRWShadingGroup *grp = DRW_shgroup_create(e_data.effect_dof_downsample_sh, psl->dof_down2_ps);
     DRW_shgroup_uniform_texture(grp, "sceneColorTex", txl->dof_source_tx);
     DRW_shgroup_uniform_texture(grp, "inputCocTex", txl->coc_halfres_tx);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
 #if 0
   {
     DRWShadingGroup *grp = DRW_shgroup_create(e_data.effect_dof_flatten_h_sh,
                                               psl->dof_flatten_h_ps);
     DRW_shgroup_uniform_texture(grp, "inputCocTex", txl->coc_halfres_tx);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
   {
     DRWShadingGroup *grp = DRW_shgroup_create(e_data.effect_dof_flatten_v_sh,
                                               psl->dof_flatten_v_ps);
     DRW_shgroup_uniform_texture(grp, "inputCocTex", wpd->coc_temp_tx);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
   {
     DRWShadingGroup *grp = DRW_shgroup_create(e_data.effect_dof_dilate_v_sh, psl->dof_dilate_v_ps);
     DRW_shgroup_uniform_texture(grp, "inputCocTex", wpd->coc_tiles_tx[0]);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
   {
     DRWShadingGroup *grp = DRW_shgroup_create(e_data.effect_dof_dilate_h_sh, psl->dof_dilate_h_ps);
     DRW_shgroup_uniform_texture(grp, "inputCocTex", wpd->coc_tiles_tx[1]);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
 #endif
   {
@@ -356,14 +357,14 @@ void workbench_dof_create_pass(WORKBENCH_Data *vedata,
     DRW_shgroup_uniform_texture(grp, "halfResColorTex", txl->dof_source_tx);
     DRW_shgroup_uniform_vec2(grp, "invertedViewportSize", DRW_viewport_invert_size_get(), 1);
     DRW_shgroup_uniform_float_copy(grp, "noiseOffset", offset);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
   {
     DRWShadingGroup *grp = DRW_shgroup_create(e_data.effect_dof_blur2_sh, psl->dof_blur2_ps);
     DRW_shgroup_uniform_texture(grp, "inputCocTex", txl->coc_halfres_tx);
     DRW_shgroup_uniform_texture(grp, "blurTex", wpd->dof_blur_tx);
     DRW_shgroup_uniform_vec2(grp, "invertedViewportSize", DRW_viewport_invert_size_get(), 1);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
   {
     DRWShadingGroup *grp = DRW_shgroup_create(e_data.effect_dof_resolve_sh, psl->dof_resolve_ps);
@@ -372,7 +373,7 @@ void workbench_dof_create_pass(WORKBENCH_Data *vedata,
     DRW_shgroup_uniform_vec2(grp, "invertedViewportSize", DRW_viewport_invert_size_get(), 1);
     DRW_shgroup_uniform_vec3(grp, "dofParams", &wpd->dof_aperturesize, 1);
     DRW_shgroup_uniform_vec2(grp, "nearFar", wpd->dof_near_far, 1);
-    DRW_shgroup_call_add(grp, quad, NULL);
+    DRW_shgroup_call(grp, quad, NULL);
   }
 }
 

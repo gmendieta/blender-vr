@@ -277,7 +277,8 @@ static bool write_internal_bake_pixels(Image *image,
     RE_bake_margin(ibuf, mask_buffer, margin);
   }
 
-  ibuf->userflags |= IB_DISPLAY_BUFFER_INVALID | IB_BITMAPDIRTY;
+  ibuf->userflags |= IB_DISPLAY_BUFFER_INVALID;
+  BKE_image_mark_dirty(image, ibuf);
 
   if (ibuf->rect_float) {
     ibuf->userflags |= IB_RECT_INVALID;
@@ -386,7 +387,7 @@ static bool write_external_bake_pixels(const char *filepath,
 #ifndef WIN32
     chmod(filepath, S_IRUSR | S_IWUSR);
 #endif
-    //printf("%s saving bake map: '%s'\n", __func__, filepath);
+    // printf("%s saving bake map: '%s'\n", __func__, filepath);
   }
 
   /* garbage collection */

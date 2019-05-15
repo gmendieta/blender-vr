@@ -170,6 +170,7 @@ static void uvedit_get_batches(Object *ob,
   const bool draw_stretch = (sima->flag & SI_DRAW_STRETCH) != 0;
   const bool draw_faces = (sima->flag & SI_NO_DRAWFACES) == 0;
 
+  DRW_mesh_batch_cache_validate(ob->data);
   *edges = DRW_mesh_batch_cache_get_edituv_edges(ob->data);
   *verts = DRW_mesh_batch_cache_get_edituv_verts(ob->data);
 
@@ -206,6 +207,7 @@ static void draw_uvs_shadow(SpaceImage *UNUSED(sima),
   float col[4];
   UI_GetThemeColor4fv(TH_UV_SHADOW, col);
 
+  DRW_mesh_batch_cache_validate(me);
   GPUBatch *edges = DRW_mesh_batch_cache_get_uv_edges(me);
   DRW_mesh_batch_cache_create_requested(eval_ob, me, scene->toolsettings, false, false);
 
@@ -228,6 +230,7 @@ static void draw_uvs_texpaint(Scene *scene, Object *ob, Depsgraph *depsgraph)
     return;
   }
 
+  DRW_mesh_batch_cache_validate(me);
   GPUBatch *geom = DRW_mesh_batch_cache_get_uv_edges(me);
   DRW_mesh_batch_cache_create_requested(eval_ob, me, scene->toolsettings, false, false);
 
@@ -479,14 +482,12 @@ static void draw_uv_shadows_get(
 }
 
 void ED_uvedit_draw_main(SpaceImage *sima,
-                         ARegion *ar,
                          Scene *scene,
                          ViewLayer *view_layer,
                          Object *obedit,
                          Object *obact,
                          Depsgraph *depsgraph)
 {
-  ToolSettings *toolsettings = scene->toolsettings;
   bool show_uvedit, show_uvshadow, show_texpaint_uvshadow;
 
   show_uvedit = ED_space_image_show_uvedit(sima, obedit);
@@ -508,10 +509,6 @@ void ED_uvedit_draw_main(SpaceImage *sima,
     }
     else {
       draw_uvs_texpaint(scene, obact, depsgraph);
-    }
-
-    if (show_uvedit && !(toolsettings->use_uv_sculpt)) {
-      ED_image_draw_cursor(ar, sima->cursor);
     }
   }
 }
