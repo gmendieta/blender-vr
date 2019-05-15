@@ -1,7 +1,7 @@
-#ifndef __VR_ITOOL_H__
-#define __VR_ITOOL_H__
+#ifndef __VR_IOPERATOR_H__
+#define __VR_IOPERATOR_H__
 
-#include "vr_types.h"
+#include "vr_event.h"
 
 extern "C"
 {
@@ -22,7 +22,10 @@ class VR_IOperator
 public:
 
   /// Wheter the Operator is suitable for the current State
-  virtual bool isSuitable(bContext *C, VR_Event *event) = 0;
+  virtual bool poll(bContext *C) = 0;
+
+  /// Wheter the Operator overrides the cursor drawing or not
+  virtual bool overridesCursor() = 0;
 
   /// Invoke the operator 
   virtual VR_OPERATOR_STATE invoke(bContext *C, VR_Event *event) = 0;

@@ -1,6 +1,7 @@
 #include "vr_op_gpencil.h"
 
 #include "vr_vr.h"
+#include "vr_types.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -28,6 +29,9 @@ extern "C"
 
 #include "DEG_depsgraph.h"
 #include "DEG_depsgraph_query.h"
+
+#include "WM_api.h"
+#include "WM_types.h"
 
 #include "ED_undo.h"
 #include "ED_gpencil.h"
@@ -114,7 +118,7 @@ VR_OP_GPencil::~VR_OP_GPencil()
 	}
 }
 
-bool VR_OP_GPencil::isSuitable(bContext *C, VR_Event *event)
+bool VR_OP_GPencil::poll(bContext *C)
 {
 	Object *ob = CTX_data_active_object(C);
 	bGPdata *gpd = ED_gpencil_data_get_active_evaluated(C);
@@ -124,9 +128,50 @@ bool VR_OP_GPencil::isSuitable(bContext *C, VR_Event *event)
 	return true;
 }
 
+bool VR_OP_GPencil::overridesCursor()
+{
+	// TODO
+	return false;
+}
+
 VR_OPERATOR_STATE VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 {
-	if (event->pressure < GPENCIL_PRESSURE_MIN) {
+	// Check thumbsticks to allow user to modify Sensitivity and Strength while drawing
+	bool brush_edited(false);
+	Brush *brush = getBrush(C);
+	if (event->r_thumbstick_up_pressure > 0.1f) {
+		int size = brush->size + 1;
+		// scale unprojected radius so it stays consistent with brush size
+		BKE_brush_scale_unprojected_radius(&brush->unprojected_radius, size, brush->size);
+		brush->size = size;
+		brush_edited = true;
+	}
+	else if (event->r_thumbstick_down_pressure > 0.1f) {
+		int size = brush->size - 1;
+		// scale unprojected radius so it stays consistent with brush size 
+		BKE_brush_scale_unprojected_radius(&brush->unprojected_radius, size, brush->size);
+		brush->size = size;
+		brush_edited = true;
+	}
+
+	if (event->r_thumbstick_left_pressure > 0.1f) {
+		float strength = brush->gpencil_settings->draw_strength - event->r_thumbstick_left_pressure / 10.0f;
+		brush->gpencil_settings->draw_strength = CLAMPIS(strength, 0.0f, 1.0f);
+		brush_edited = true;
+	}
+	else if (event->r_thumbstick_right_pressure > 0.1f) {
+		float strength = brush->gpencil_settings->draw_strength + event->r_thumbstick_right_pressure / 10.0f;
+		brush->gpencil_settings->draw_strength = CLAMPIS(strength, 0.0f, 1.0f);
+		brush_edited = true;
+	}
+	if (brush_edited) {
+		WM_event_add_notifier(C, NC_BRUSH | NA_EDITED, brush);
+		WM_event_add_notifier(C, NC_SPACE | ND_SPACE_VIEW3D, NULL);
+	}
+
+	float pressure = event->r_index_trigger_pressure;
+
+	if (pressure < GPENCIL_PRESSURE_MIN) {
 		if (status == GP_STATUS_PAINTING) {
 			addStroke(C);
 		}
@@ -146,13 +191,12 @@ VR_OPERATOR_STATE VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 	// We are painting
 	status = GP_STATUS_PAINTING;
 
-	Brush *brush = getBrush(C);
+	brush = getBrush(C);
 	RNG *rng = getRNG();
 
 	bGPDspoint pt;
 	memcpy(&pt.x, &event->x, 3 * sizeof(float));
 	
-	float pressure = event->pressure;
 
 	// Copied from gpencil_paint.c
 	/* pressure */
@@ -199,7 +243,7 @@ VR_OPERATOR_STATE VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 	
 	/* color strength */
 	if (brush->gpencil_settings->flag & GP_BRUSH_USE_STENGTH_PRESSURE) {
-		float curvef = curvemapping_evaluateF(brush->gpencil_settings->curve_strength, 0, event->pressure);
+		float curvef = curvemapping_evaluateF(brush->gpencil_settings->curve_strength, 0, pressure);
 		float tmp_pressure = curvef * brush->gpencil_settings->draw_sensitivity;
 		pt.strength = tmp_pressure * brush->gpencil_settings->draw_strength;
 	}
@@ -359,8 +403,10 @@ void VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 	sthickness = brush->size * obscale / vr_scale;
 	copy_v4_v4(ink, gp_style->stroke_rgba);
 
+	GPU_depth_test(true);
 	// Draw volumetric points
 	gp_draw_stroke_volumetric_3d(m_points.data(), totpoints, sthickness, ink);
+	GPU_depth_test(false);
 }
 
 Brush* VR_OP_GPencil::getBrush(bContext * C)

@@ -5,6 +5,7 @@
 #include <deque>
 
 #include "vr_types.h"
+#include "vr_event.h"
 #include "vr_ui_window.h"
 
 // Operators
@@ -50,6 +51,11 @@ class VR_UI_Manager
 		VR_UI_State_kMenu,
     VR_UI_State_kOperator,
 	} VR_UI_State;
+
+  typedef enum _VR_UI_Visibility {
+    VR_UI_Visibility_kVisible = 0,
+    VR_UI_Visibility_kHidden,
+  } VR_UI_Visibility;
 
 public:
 	VR_UI_Manager();
@@ -107,6 +113,7 @@ private:
 	VR_UI_Window *m_mainMenu;
 
 	VR_UI_State m_state;
+  VR_UI_Visibility m_uiVisibility;
 
 	float m_bProjectionMatrix[VR_SIDES_MAX][4][4];		// Blender built Projection matrix
 	float m_bViewMatrix[VR_SIDES_MAX][4][4];				  // Blender built View matrix
@@ -135,10 +142,12 @@ private:
 	VR_ControllerState m_currentState[VR_SIDES_MAX];		// Current state of controllers
 	VR_ControllerState m_previousState[VR_SIDES_MAX];		// Previous state of controllers
 
-	VR_UI_HitResult m_hitResult[VR_SIDES_MAX];						// Hit States
+	VR_UI_HitResult m_hitResult[VR_SIDES_MAX];					// Hit States
 
-  VR_Event m_event, m_prevEvent;
-  VR_IOperator *m_currentOp;
+  VR_Event m_event, m_prevEvent;                      // Event and Previous Event
+  VR_DrawData m_drawData;                             // Draw data used by Operators
+  VR_IOperator *m_currentOp;                          // Invoking operator
+
   VR_OP_GPencil *m_gpencilOp;
 
 	/// Returns the primary side
@@ -149,6 +158,9 @@ private:
 
 	/// Get current Touch controller coordinates in Screen coordinates
 	void getTouchScreenCoordinates(unsigned int side, float coords[2]);
+
+  /// Process Menu visibility
+  void processMenuVisibility();
 
 	/// Process Menu Ray hits
 	void processMenuRayHits();
@@ -166,7 +178,7 @@ private:
   void processVREvents();
 
   /// Get the Suitable operator for the current context
-  VR_IOperator* getSuitableOperator(bContext *C, VR_Event *event);
+  VR_IOperator* getSuitableOperator(bContext *C);
 
   /// Process VR tools
   void processOperators(bContext *C, VR_Event *event);

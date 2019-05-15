@@ -3,7 +3,6 @@
 #include "vr_ghost_types.h"
 
 // VR operators
-#include "vr_ioperator.h"
 #include "vr_op_gpencil.h"
 
 #include <string.h>	// memcpy
@@ -31,6 +30,8 @@ extern "C"
 #include "GPU_shader.h"
 #include "GPU_state.h"
 
+#include "ED_view3d.h"
+
 // Length of the drawn Ray when there is no Hit
 static const float VR_RAY_LEN = 0.1f;
 
@@ -42,6 +43,7 @@ static const float VR_MENU_MOVE_DIST_MIN = 0.5f;
 VR_UI_Manager::VR_UI_Manager():
 	m_bWindow(nullptr),
 	m_state(VR_UI_State_kIdle),
+	m_uiVisibility(VR_UI_Visibility_kVisible),
 	m_currentOp(nullptr)
 {
 	// Set identity navigation matrices
@@ -116,6 +118,7 @@ void VR_UI_Manager::processUserInput(bContext *C)
 	if (!m_currentState[VR_SIDE_RIGHT].mEnabled && !m_currentState[VR_SIDE_LEFT].mEnabled) {
 		return;
 	}
+	processMenuVisibility();
 	processMenuRayHits();
 	processMenuMatrix();
 	processMenuGhostEvents();
@@ -159,10 +162,32 @@ void VR_UI_Manager::getTouchScreenCoordinates(unsigned int side, float coords[2]
 	coords[1] = (position[1] / w) / 2.0f + 0.5f;
 }
 
+void VR_UI_Manager::processMenuVisibility()
+{
+	// Early return
+	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu) {
+		return;
+	}
+	bool prevRThumbClick = m_previousState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RTHUMB;
+	bool currRThumbClick = m_currentState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RTHUMB;
+
+	if (currRThumbClick && !prevRThumbClick) {
+		if (m_uiVisibility == VR_UI_Visibility_kVisible) {
+			m_uiVisibility = VR_UI_Visibility_kHidden;
+		}
+		else if (m_uiVisibility == VR_UI_Visibility_kHidden) {
+			m_uiVisibility = VR_UI_Visibility_kVisible;
+		}
+	}
+}
+
 void VR_UI_Manager::processMenuRayHits()
 {
 	// Early return
 	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu) {
+		return;
+	}
+	if (m_uiVisibility != VR_UI_Visibility_kVisible) {
 		return;
 	}
 
@@ -192,9 +217,14 @@ void VR_UI_Manager::processMenuRayHits()
 void VR_UI_Manager::processMenuMatrix()
 {
 	// Early return
-	if ((m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu)) {
+	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu) {
 		return;
 	}
+	if (m_uiVisibility != VR_UI_Visibility_kVisible) {
+		m_state = VR_UI_State_kIdle;
+		return;
+	}
+
 	bool prevRHandTrigger = m_previousState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
 	bool currRHandTrigger = m_currentState[VR_SIDE_RIGHT].mButtons & VR_BUTTON_RHAND_TRIGGER;
 
@@ -253,6 +283,10 @@ void VR_UI_Manager::processMenuGhostEvents()
 {
 	// Early return
 	if (m_state != VR_UI_State_kIdle && m_state != VR_UI_State_kMenu) {
+		return;
+	}
+	if (m_uiVisibility != VR_UI_Visibility_kVisible) {
+		m_state = VR_UI_State_kIdle;
 		return;
 	}
 
@@ -548,8 +582,8 @@ void VR_UI_Manager::processVREvents()
 	m_prevEvent.alt = m_event.alt;
 	m_prevEvent.ctrl = m_event.ctrl;
 	m_prevEvent.shift = m_event.shift;
-	m_prevEvent.click = m_event.click;
-	m_prevEvent.pressure = m_event.pressure;
+	m_prevEvent.r_index_trigger = m_event.r_index_trigger;
+	m_prevEvent.r_index_trigger_pressure= m_event.r_index_trigger_pressure;
 
 	// Store current event previous values
 	m_event.prevx = m_prevEvent.x;
@@ -561,8 +595,12 @@ void VR_UI_Manager::processVREvents()
 	m_prevEvent.z = m_event.z;
 	
 	// Update current event
-	m_event.alt = m_event.shift = m_event.ctrl = m_event.click = 0;
+	m_event.alt = m_event.shift = m_event.ctrl = m_event.r_index_trigger = 0;
 	m_event.x = m_event.y = m_event.z = 0.0f;
+	m_event.r_thumbstick_down = m_event.r_thumbstick_up = false;
+	m_event.r_thumbstick_left = m_event.r_thumbstick_right = false;
+	m_event.r_thumbstick_down_pressure = m_event.r_thumbstick_up_pressure = 0.0f;
+	m_event.r_thumbstick_left_pressure = m_event.r_thumbstick_right_pressure = 0.0f;
 
 	VR_Side sidePrimary = getPrimarySide();
 	VR_Side sideSecondary = getSecondarySide();
@@ -573,16 +611,29 @@ void VR_UI_Manager::processVREvents()
 		// Apply navigation to model to make it appear in Eye space
 		mul_m4_m4_pre(matrix, m_navScaledMatrix);
 		copy_v3_v3(&m_event.x, matrix[3]);
-		m_event.pressure = m_currentState[sidePrimary].mIndexTrigger;
-		if (m_event.pressure > 0.0f) {
-			m_event.click = 1;
+		m_event.r_index_trigger_pressure = m_currentState[sidePrimary].mIndexTrigger;
+		m_event.r_index_trigger = m_currentState[sidePrimary].mButtons | VR_BUTTON_LINDEX_TRIGGER;
+		m_event.r_thumbstick_left = m_currentState[sidePrimary].mButtons | VR_THUMBSTICK_SWIPE_LEFT;
+		m_event.r_thumbstick_right = m_currentState[sidePrimary].mButtons | VR_THUMBSTICK_SWIPE_RIGHT;
+		m_event.r_thumbstick_up = m_currentState[sidePrimary].mButtons | VR_THUMBSTICK_SWIPE_UP;
+		m_event.r_thumbstick_down = m_currentState[sidePrimary].mButtons | VR_THUMBSTICK_SWIPE_DOWN;
+
+		// Thumbstick is in range [-1.0, 1.0]. Negative values to Down and positive values to Up
+		float rThumbstickUpDown = m_currentState[sidePrimary].mThumbstick[1];
+		if (rThumbstickUpDown >= 0.0f) {
+			m_event.r_thumbstick_up_pressure = std::abs(rThumbstickUpDown);
 		}
-		/*
-		bool indexTriggerDown = m_currentState[sidePrimary].mButtons & VR_BUTTON_RINDEX_TRIGGER;
-		if (indexTriggerDown) {
-			m_event.click = 1;
+		else {
+			m_event.r_thumbstick_down_pressure = std::abs(rThumbstickUpDown);
 		}
-		*/
+		// Thumbstick is in range [-1.0, 0.0]. Negative values to Left and positive values to Right
+		float rThumbstickLeftRight = m_currentState[sidePrimary].mThumbstick[0];
+		if (rThumbstickLeftRight >= 0.0f) {
+			m_event.r_thumbstick_right_pressure = std::abs(rThumbstickLeftRight);
+		}
+		else {
+			m_event.r_thumbstick_left_pressure = std::abs(rThumbstickLeftRight);
+		}
 	}
 	// Left Hand
 	if (m_currentState[sideSecondary].mEnabled) {
@@ -602,10 +653,10 @@ void VR_UI_Manager::processVREvents()
 	}
 }
 
-VR_IOperator* VR_UI_Manager::getSuitableOperator(bContext * C, VR_Event *event)
+VR_IOperator* VR_UI_Manager::getSuitableOperator(bContext * C)
 {
 
-	if (m_gpencilOp->isSuitable(C, event)) {
+	if (m_gpencilOp->poll(C)) {
 		return (VR_IOperator*)m_gpencilOp;
 	}
 	return nullptr;
@@ -621,7 +672,7 @@ void VR_UI_Manager::processOperators(bContext *C, VR_Event *event)
 	When an operator starts, we will invoke it until it returns something different from VR_OPERATOR_RUNNING
 	*/
 	if (!m_currentOp) {
-		m_currentOp = getSuitableOperator(C, event);
+		m_currentOp = getSuitableOperator(C);
 	}
 	if (m_currentOp) {
 		VR_OPERATOR_STATE state_op = m_currentOp->invoke(C, event);
@@ -721,9 +772,21 @@ void VR_UI_Manager::doPreDraw(bContext *C, unsigned int side)
 
 void VR_UI_Manager::doPostDraw(bContext *C, unsigned int side)
 {
-	drawTouchControllers();
-	drawUserInterface();
-	drawOperators(C);
+	VR_IOperator *op = m_currentOp;
+	if (!op) {
+		op = getSuitableOperator(C);
+	}
+	// Draw standard only if an operator does not override
+	if (!op || !op->overridesCursor() || !op->poll(C)) {
+		drawTouchControllers();
+	}
+	// Draw UI only if visible
+	if (m_uiVisibility == VR_UI_Visibility_kVisible) {
+		drawUserInterface();
+	}
+	if (m_currentOp) {
+		m_currentOp->draw(C, m_viewProjectionMatrix);
+	}
 }
 
 void VR_UI_Manager::drawTouchControllers()
@@ -740,7 +803,6 @@ void VR_UI_Manager::drawTouchControllers()
 	};
 	float hitColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	// TODO Change for a model or custom GPUBatch
 	GPUBatch *batch = DRW_cache_sphere_get();
 	GPUShader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
 	GPU_batch_program_set_shader(batch, shader);
@@ -808,13 +870,6 @@ void VR_UI_Manager::drawUserInterface()
 	GPU_depth_test(true);
 	m_mainMenu->draw(m_viewProjectionMatrix);
 	GPU_depth_test(false);
-}
-
-void VR_UI_Manager::drawOperators(bContext *C)
-{
-	if (m_currentOp) {
-		m_currentOp->draw(C, m_viewProjectionMatrix);
-	}
 }
 
 void VR_UI_Manager::pushGhostEvent(VR_GHOST_Event *event)

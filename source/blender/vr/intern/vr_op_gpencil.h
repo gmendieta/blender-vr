@@ -24,7 +24,10 @@ public:
   ~VR_OP_GPencil();
 
   /// Wheter the Operator is suitable for the current State
-  bool isSuitable(bContext *C, VR_Event *event) override;
+  bool poll(bContext *C) override;
+
+  /// Wheter the Operator overrides the cursor drawing or not
+  bool overridesCursor() override;
 
   /// Invoke the operator 
   VR_OPERATOR_STATE invoke(bContext *C, VR_Event *event) override;

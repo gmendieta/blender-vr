@@ -72,6 +72,7 @@ set(SRC
     vr_vr.h
     
     intern/vr_types.h
+    intern/vr_event.h
     intern/vr_math.h
     intern/vr_utils.h
     intern/vr_draw_cache.h
