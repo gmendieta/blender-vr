@@ -823,7 +823,8 @@ void VR_UI_Manager::drawTouchControllers()
 		GPU_batch_uniform_4f(batch, "color", color[0], color[1], color[2], color[3]);
 		GPU_batch_uniform_mat4(batch, "ModelViewProjectionMatrix", modelViewProj);
 		GPU_batch_program_use_begin(batch);
-		GPU_batch_draw_range_ex(batch, 0, 0, false);
+		GPU_batch_bind(batch);
+		GPU_batch_draw_advanced(batch, 0, 0, 0, 0);
 		GPU_batch_program_use_end(batch);
 
 		float rayLen = VR_RAY_LEN;
@@ -859,7 +860,8 @@ void VR_UI_Manager::drawRay(float rayOrigin[3], float rayDir[3], float rayLen, f
 	GPU_batch_uniform_4f(batch, "color", rayColor[0], rayColor[1], rayColor[2], rayColor[3]);
 	GPU_batch_uniform_mat4(batch, "ModelViewProjectionMatrix", modelViewProj);
 	GPU_batch_program_use_begin(batch);
-	GPU_batch_draw_range_ex(batch, 0, 0, false);
+	GPU_batch_bind(batch);
+	GPU_batch_draw_advanced(batch, 0, 0, 0, 0);
 	GPU_batch_program_use_end(batch);
 	
 	GPU_batch_discard(batch);

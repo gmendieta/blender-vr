@@ -70,7 +70,8 @@ void VR_UI_Window::draw(float viewProj[4][4])
 	GPU_batch_uniform_mat4(m_batch, "ModelViewProjectionMatrix", modelViewProj);
 
 	GPU_batch_program_use_begin(m_batch);
-	GPU_batch_draw_range_ex(m_batch, 0, 0, false);
+	GPU_batch_bind(m_batch);
+	GPU_batch_draw_advanced(m_batch, 0, 0, 0, 0);
 	GPU_batch_program_use_end(m_batch);
 	GPU_texture_unbind(colorTex);
 }
