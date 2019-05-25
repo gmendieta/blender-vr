@@ -693,7 +693,6 @@ void WM_operator_properties_free(PointerRNA *ptr)
 
   if (properties) {
     IDP_FreeProperty(properties);
-    MEM_freeN(properties);
     ptr->data = NULL; /* just in case */
   }
 }
@@ -3100,8 +3099,7 @@ static void redraw_timer_step(bContext *C,
 {
   if (type == eRTDrawRegion) {
     if (ar) {
-      ED_region_do_draw(C, ar);
-      ar->do_draw = false;
+      wm_draw_region_test(C, sa, ar);
     }
   }
   else if (type == eRTDrawRegionSwap) {
@@ -3125,8 +3123,7 @@ static void redraw_timer_step(bContext *C,
       for (ar_iter = sa_iter->regionbase.first; ar_iter; ar_iter = ar_iter->next) {
         if (ar_iter->visible) {
           CTX_wm_region_set(C, ar_iter);
-          ED_region_do_draw(C, ar_iter);
-          ar_iter->do_draw = false;
+          wm_draw_region_test(C, sa_iter, ar_iter);
         }
       }
     }
@@ -3171,6 +3168,7 @@ static int redraw_timer_exec(bContext *C, wmOperator *op)
   wmWindow *win = CTX_wm_window(C);
   ScrArea *sa = CTX_wm_area(C);
   ARegion *ar = CTX_wm_region(C);
+  wmWindowManager *wm = CTX_wm_manager(C);
   double time_start, time_delta;
   const int type = RNA_enum_get(op->ptr, "type");
   const int iter = RNA_int_get(op->ptr, "iterations");
@@ -3183,6 +3181,8 @@ static int redraw_timer_exec(bContext *C, wmOperator *op)
   WM_cursor_wait(1);
 
   time_start = PIL_check_seconds_timer();
+
+  wm_window_make_drawable(wm, win);
 
   for (a = 0; a < iter; a++) {
     redraw_timer_step(C, bmain, scene, depsgraph, win, sa, ar, type, cfra);

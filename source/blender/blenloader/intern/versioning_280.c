@@ -715,6 +715,23 @@ static void do_version_constraints_copy_scale_power(ListBase *lb)
   }
 }
 
+static void do_versions_seq_alloc_transform_and_crop(ListBase *seqbase)
+{
+  for (Sequence *seq = seqbase->first; seq != NULL; seq = seq->next) {
+    if (seq->strip->transform == NULL) {
+      seq->strip->transform = MEM_callocN(sizeof(struct StripTransform), "StripTransform");
+    }
+
+    if (seq->strip->crop == NULL) {
+      seq->strip->crop = MEM_callocN(sizeof(struct StripCrop), "StripCrop");
+    }
+
+    if (seq->seqbase.first != NULL) {
+      do_versions_seq_alloc_transform_and_crop(&seq->seqbase);
+    }
+  }
+}
+
 void do_versions_after_linking_280(Main *bmain)
 {
   bool use_collection_compat_28 = true;
@@ -850,7 +867,6 @@ void do_versions_after_linking_280(Main *bmain)
       for (SceneRenderLayer *srl = scene->r.layers.first; srl; srl = srl->next) {
         if (srl->prop) {
           IDP_FreeProperty(srl->prop);
-          MEM_freeN(srl->prop);
         }
         BKE_freestyle_config_free(&srl->freestyleConfig, true);
       }
@@ -1083,6 +1099,32 @@ void do_versions_after_linking_280(Main *bmain)
 
       BKE_rigidbody_objects_collection_validate(scene, rbw);
       BKE_rigidbody_constraints_collection_validate(scene, rbw);
+    }
+  }
+
+  if (!MAIN_VERSION_ATLEAST(bmain, 280, 69)) {
+    /* Unify DOF settings (EEVEE part only) */
+    const int SCE_EEVEE_DOF_ENABLED = (1 << 7);
+    LISTBASE_FOREACH (Scene *, scene, &bmain->scenes) {
+      if (STREQ(scene->r.engine, RE_engine_id_BLENDER_EEVEE)) {
+        if (scene->eevee.flag & SCE_EEVEE_DOF_ENABLED) {
+          Object *cam_ob = scene->camera;
+          if (cam_ob && cam_ob->type == OB_CAMERA) {
+            Camera *cam = cam_ob->data;
+            cam->dof.flag |= CAM_DOF_ENABLED;
+          }
+        }
+      }
+    }
+
+    LISTBASE_FOREACH (Camera *, camera, &bmain->cameras) {
+      camera->dof.focus_object = camera->dof_ob;
+      camera->dof.focus_distance = camera->dof_distance;
+      camera->dof.aperture_fstop = camera->gpu_dof.fstop;
+      camera->dof.aperture_rotation = camera->gpu_dof.rotation;
+      camera->dof.aperture_ratio = camera->gpu_dof.ratio;
+      camera->dof.aperture_blades = camera->gpu_dof.num_blades;
+      camera->dof_ob = NULL;
     }
   }
 }
@@ -1671,10 +1713,10 @@ void blo_do_versions_280(FileData *fd, Library *UNUSED(lib), Main *bmain)
     } \
   } \
   ((void)0)
-
+        const int SCE_EEVEE_DOF_ENABLED = (1 << 7);
         IDProperty *props = IDP_GetPropertyFromGroup(scene->layer_properties,
                                                      RE_engine_id_BLENDER_EEVEE);
-        EEVEE_GET_BOOL(props, volumetric_enable, SCE_EEVEE_VOLUMETRIC_ENABLED);
+        // EEVEE_GET_BOOL(props, volumetric_enable, SCE_EEVEE_VOLUMETRIC_ENABLED);
         EEVEE_GET_BOOL(props, volumetric_lights, SCE_EEVEE_VOLUMETRIC_LIGHTS);
         EEVEE_GET_BOOL(props, volumetric_shadows, SCE_EEVEE_VOLUMETRIC_SHADOWS);
         EEVEE_GET_BOOL(props, gtao_enable, SCE_EEVEE_GTAO_ENABLED);
@@ -1685,7 +1727,7 @@ void blo_do_versions_280(FileData *fd, Library *UNUSED(lib), Main *bmain)
         EEVEE_GET_BOOL(props, motion_blur_enable, SCE_EEVEE_MOTION_BLUR_ENABLED);
         EEVEE_GET_BOOL(props, shadow_high_bitdepth, SCE_EEVEE_SHADOW_HIGH_BITDEPTH);
         EEVEE_GET_BOOL(props, taa_reprojection, SCE_EEVEE_TAA_REPROJECTION);
-        EEVEE_GET_BOOL(props, sss_enable, SCE_EEVEE_SSS_ENABLED);
+        // EEVEE_GET_BOOL(props, sss_enable, SCE_EEVEE_SSS_ENABLED);
         EEVEE_GET_BOOL(props, sss_separate_albedo, SCE_EEVEE_SSS_SEPARATE_ALBEDO);
         EEVEE_GET_BOOL(props, ssr_enable, SCE_EEVEE_SSR_ENABLED);
         EEVEE_GET_BOOL(props, ssr_refraction, SCE_EEVEE_SSR_REFRACTION);
@@ -1739,7 +1781,6 @@ void blo_do_versions_280(FileData *fd, Library *UNUSED(lib), Main *bmain)
 
         /* Cleanup. */
         IDP_FreeProperty(scene->layer_properties);
-        MEM_freeN(scene->layer_properties);
         scene->layer_properties = NULL;
 
 #undef EEVEE_GET_FLOAT_ARRAY
@@ -3407,14 +3448,13 @@ void blo_do_versions_280(FileData *fd, Library *UNUSED(lib), Main *bmain)
           }
           SpaceOutliner *so = (SpaceOutliner *)sl;
           so->filter &= ~SO_FLAG_UNUSED_1;
-          so->show_restrict_flags = SO_RESTRICT_ENABLE | SO_RESTRICT_SELECT | SO_RESTRICT_HIDE;
+          so->show_restrict_flags = SO_RESTRICT_ENABLE | SO_RESTRICT_HIDE;
         }
       }
     }
   }
 
-  {
-    /* Versioning code until next subversion bump goes here. */
+  if (!MAIN_VERSION_ATLEAST(bmain, 280, 69)) {
     LISTBASE_FOREACH (bArmature *, arm, &bmain->armatures) {
       arm->flag &= ~(ARM_FLAG_UNUSED_7 | ARM_FLAG_UNUSED_9);
     }
@@ -3425,5 +3465,54 @@ void blo_do_versions_280(FileData *fd, Library *UNUSED(lib), Main *bmain)
         light->sun_angle = 2.0f * atanf(light->area_size);
       }
     }
+  }
+
+  if (!MAIN_VERSION_ATLEAST(bmain, 280, 70)) {
+    /* New image alpha modes. */
+    LISTBASE_FOREACH (Image *, image, &bmain->images) {
+      const int IMA_IGNORE_ALPHA = (1 << 12);
+      if (image->flag & IMA_IGNORE_ALPHA) {
+        image->alpha_mode = IMA_ALPHA_IGNORE;
+        image->flag &= ~IMA_IGNORE_ALPHA;
+      }
+    }
+  }
+
+  if (!MAIN_VERSION_ATLEAST(bmain, 280, 71)) {
+    /* This assumes the Blender builtin config. Depending on the OCIO
+     * environment variable for versioning is weak, and these deprecated view
+     * transforms and look names don't seem to exist in other commonly used
+     * OCIO configs so .blend files created for those would be unaffected. */
+    for (Scene *scene = bmain->scenes.first; scene; scene = scene->id.next) {
+      ColorManagedViewSettings *view_settings;
+      view_settings = &scene->view_settings;
+
+      if (STREQ(view_settings->view_transform, "Default")) {
+        STRNCPY(view_settings->view_transform, "Standard");
+      }
+      else if (STREQ(view_settings->view_transform, "RRT") ||
+               STREQ(view_settings->view_transform, "Film")) {
+        STRNCPY(view_settings->view_transform, "Filmic");
+      }
+      else if (STREQ(view_settings->view_transform, "Log")) {
+        STRNCPY(view_settings->view_transform, "Filmic Log");
+      }
+
+      if (STREQ(view_settings->look, "Filmic - Base Contrast")) {
+        STRNCPY(view_settings->look, "None");
+      }
+    }
+  }
+
+  if (!MAIN_VERSION_ATLEAST(bmain, 280, 72)) {
+    for (Scene *scene = bmain->scenes.first; scene; scene = scene->id.next) {
+      if (scene->ed != NULL) {
+        do_versions_seq_alloc_transform_and_crop(&scene->ed->seqbase);
+      }
+    }
+  }
+
+  {
+    /* Versioning code until next subversion bump goes here. */
   }
 }
