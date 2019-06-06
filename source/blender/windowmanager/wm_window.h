@@ -83,8 +83,7 @@ void wm_quit_with_optional_confirmation_prompt(bContext *C, wmWindow *win) ATTR_
 int wm_window_new_exec(bContext *C, struct wmOperator *op);
 int wm_window_new_main_exec(bContext *C, struct wmOperator *op);
 // VR This operator should be controlled by a define as WITH_INPUT_IME
-int			wm_window_new_vr_exec(bContext *C, struct wmOperator *op);
-
+int wm_window_new_vr_exec(bContext *C, struct wmOperator *op);
 
 void wm_test_autorun_warning(bContext *C);
 

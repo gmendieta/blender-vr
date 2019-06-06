@@ -42,7 +42,8 @@ public:
 	void beginFrame();
 	void endFrame();
 
-	
+  /// Get Last error string
+  void getErrorMessage(char errorMessage[512]);
 	/// Recenters the Origin
 	int recenterTrackingOrigin();
 	/// Set the Tracking origin type. It may be Floor or Eye
@@ -62,6 +63,7 @@ public:
 	/// Get the COntroller State. The return is a type of ControllerState structure
 	int getControllerState(unsigned int side, void *controllerState);
 
+
 private:
 	bool initialized;
 	uint64_t	mFrame;
@@ -70,6 +72,7 @@ private:
 	ovrGraphicsLuid mGraphicsLuid;
 	ovrHmdDesc	mHmdDesc;
 	ovrLayerEyeFov mLayer;
+  ovrErrorInfo mErrorInfo;
 };
 
 

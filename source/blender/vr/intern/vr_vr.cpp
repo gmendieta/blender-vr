@@ -49,12 +49,17 @@ int vr_initialize()
 	//vr.context = (HGLRC)context;
 	//wglMakeCurrent(vr.device, vr.context);
 
-	vrHmd = new VR_Oculus();
-	vrUiManager = new VR_UI_Manager();
-	int ok = vrHmd->initialize(nullptr, nullptr);
-	if (ok < 0) {
+	if (!vrHmd) {
+		vrHmd = new VR_Oculus();
+	}
+	if (!vrUiManager) {
+		vrUiManager = new VR_UI_Manager();
+	}
+
+	int result = vrHmd->initialize(nullptr, nullptr);
+	if (result < 0) {
 		vr.initialized = 0;
-		return 0;
+		return VR_RESULT_ERROR;
 	}
 
 	vrHmd->setTrackingOrigin(VR_TrackingOrigin::VR_FLOOR_LEVEL);
@@ -78,12 +83,22 @@ int vr_initialize()
 	vr.ar_vr = NULL;
 
 	vr.initialized = 1;
-	return 1;
+	return VR_RESULT_SUCCESS;
 }
 
 int vr_is_initialized()
 {
 	return vr.initialized;
+}
+
+void vr_error_get(char error_msg[VR_ERROR_LEN])
+{
+	if (!vrHmd) {
+		memset(error_msg, 0, VR_ERROR_LEN * sizeof(char));
+	}
+	else {
+		vrHmd->getErrorMessage(error_msg);
+	}
 }
 
 wmWindow* vr_window_get()
@@ -330,7 +345,7 @@ int vr_begin_frame()
 	vr_oculus_blender_matrix_build(rotation, position, head_matrix);
 	vrUiManager->setHeadMatrix(head_matrix);
 
-	return 1;
+	return VR_RESULT_SUCCESS;
 }
 
 int vr_end_frame()
@@ -379,7 +394,7 @@ int vr_end_frame()
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, read_fbo);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_fbo);
 
-	return 1;
+	return VR_RESULT_SUCCESS;
 }
 
 void vr_process_input(bContext *C)
@@ -414,7 +429,7 @@ int vr_get_eye_texture_size(int *width, int *height)
 
 	*width = vr.texture_width;
 	*height = vr.texture_height;
-	return 1;
+	return VR_RESULT_SUCCESS;
 }
 
 float vr_view_scale_get()
@@ -440,7 +455,7 @@ int vr_shutdown()
 	vr.ar_vr = NULL;
 	vr.initialized = 0;
 	
-	return 1;
+	return VR_RESULT_SUCCESS;
 }
 
 ///////////////////////////////////////

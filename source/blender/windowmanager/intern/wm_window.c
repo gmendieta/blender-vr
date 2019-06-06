@@ -454,7 +454,6 @@ void wm_window_close(bContext *C, wmWindowManager *wm, wmWindow *win)
 	}
 #endif // WITH_VR
 
-
   wm_window_free(C, wm, win);
 
   /* if temp screen, delete it after window free (it stops jobs that can access it) */
@@ -981,7 +980,19 @@ int wm_window_new_vr_exec(bContext *C, wmOperator *UNUSED(op))
 	{
 		return OPERATOR_CANCELLED;
 	}
-	int ok = vr_initialize();
+
+	int result = vr_initialize();
+  if (VR_FAILURE(result)) {
+    char errorMessage[VR_ERROR_LEN];
+    vr_error_get(errorMessage);
+    // TODO Other way to show messages?
+    printf("Error initializing VR system: %s\n", errorMessage);
+    
+    wmWindowManager *wm = CTX_wm_manager(C);
+    wm_window_close(C, wm, win_vr);
+    return OPERATOR_CANCELLED;
+  }
+
 	vr_window_set(win_vr);
 
 #endif

@@ -12,6 +12,7 @@ VR_Oculus::VR_Oculus():
 	mFrame(0),
 	mHmd(0)							// nullptr?
 {
+	mErrorInfo.Result = ovrSuccess;
 	memset(&mInfo, 0, sizeof(mInfo));
 	memset(&mLayer, 0, sizeof(mLayer));
 }
@@ -23,15 +24,20 @@ VR_Oculus::~VR_Oculus()
 
 int VR_Oculus::initialize(void * device, void * context)
 {
-	if (ovr_Initialize(nullptr) != ovrSuccess)
-	{
+	// We could use initParams if necessary
+	ovrInitParams initParams = {};
+	ovrResult result = ovr_Initialize(nullptr);
+	if (OVR_FAILURE(result)) {
+		ovr_GetLastErrorInfo(&mErrorInfo);
 		return -1;
 	}
-	ovrResult result = ovr_Create(&mHmd, &mGraphicsLuid);
-	if (result != ovrSuccess)
-	{
+	
+	result = ovr_Create(&mHmd, &mGraphicsLuid);
+	if (OVR_FAILURE(result)) {
+		ovr_GetLastErrorInfo(&mErrorInfo);
 		return -1;
 	}
+	
 	mHmdDesc = ovr_GetHmdDesc(mHmd);
 
 	// Eye Parameters
@@ -349,6 +355,16 @@ int VR_Oculus::getEyeFrustumTangents(unsigned int side, float projection[4])
 	}
 	memcpy(projection, mInfo.mEye[side].mProjection, 4 * sizeof(float));
 	return 0;
+}
+
+void VR_Oculus::getErrorMessage(char errorMessage[512])
+{
+	if (OVR_FAILURE(mErrorInfo.Result)) {
+		strcpy(errorMessage, mErrorInfo.ErrorString);
+	}
+	else {
+		memset(errorMessage, 0, 512 * sizeof(char));
+	}
 }
 
 int VR_Oculus::recenterTrackingOrigin()

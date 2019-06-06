@@ -16,6 +16,12 @@ struct View3D;
 struct ARegion;
 struct CameraParams;
 
+typedef enum _VR_Result
+{
+  VR_RESULT_SUCCESS,
+  VR_RESULT_ERROR
+} VR_Result;
+
 typedef struct _vrFov {
 	float up_tan;
 	float down_tan;
@@ -35,6 +41,16 @@ typedef struct _vrWindow {
 	struct GPUViewport *viewport[2];
 } vrWindow;
 
+#if !defined(VR_SUCCESS)
+#define VR_SUCCESS(result) (result == VR_RESULT_SUCCESS)
+#endif
+
+#if !defined(VR_FAILURE)
+#define VR_FAILURE(result) (!VR_SUCCESS(result))
+#endif
+
+#define VR_ERROR_LEN 512
+
 /// Get the VR singleton
 vrWindow* vr_get_instance();
 
@@ -46,6 +62,9 @@ int vr_shutdown();
 
 /// Returns 1 if VR is initialized, 0 otherwise
 int vr_is_initialized();
+
+/// Returns the last error message if exists
+void vr_error_get(char error_msg[VR_ERROR_LEN]);
 
 /// Get the VR window
 struct wmWindow* vr_window_get();
