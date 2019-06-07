@@ -66,9 +66,11 @@ static int rna_CurveMapping_curves_length(PointerRNA *ptr)
   CurveMapping *cumap = (CurveMapping *)ptr->data;
   int len;
 
-  for (len = 0; len < CM_TOT; len++)
-    if (!cumap->cm[len].curve)
+  for (len = 0; len < CM_TOT; len++) {
+    if (!cumap->cm[len].curve) {
       break;
+    }
+  }
 
   return len;
 }
@@ -85,10 +87,12 @@ static void rna_CurveMapping_clip_set(PointerRNA *ptr, bool value)
 {
   CurveMapping *cumap = (CurveMapping *)ptr->data;
 
-  if (value)
+  if (value) {
     cumap->flag |= CUMA_DO_CLIP;
-  else
+  }
+  else {
     cumap->flag &= ~CUMA_DO_CLIP;
+  }
 
   curvemapping_changed(cumap, false);
 }
@@ -340,8 +344,9 @@ static CBData *rna_ColorRampElement_new(struct ColorBand *coba,
 {
   CBData *element = BKE_colorband_element_add(coba, position);
 
-  if (element == NULL)
+  if (element == NULL) {
     BKE_reportf(reports, RPT_ERROR, "Unable to add element to colorband (limit %d)", MAXCOLORBAND);
+  }
 
   return element;
 }
@@ -414,8 +419,9 @@ static void rna_ColorManagedDisplaySettings_display_device_update(Main *bmain,
 {
   ID *id = ptr->id.data;
 
-  if (!id)
+  if (!id) {
     return;
+  }
 
   if (GS(id->name) == ID_SCE) {
     Scene *scene = (Scene *)id;
@@ -653,8 +659,9 @@ static void rna_ColorManagement_update(Main *UNUSED(bmain), Scene *UNUSED(scene)
 {
   ID *id = ptr->id.data;
 
-  if (!id)
+  if (!id) {
     return;
+  }
 
   if (GS(id->name) == ID_SCE) {
     DEG_id_tag_update(id, 0);
@@ -1249,7 +1256,10 @@ static void rna_def_colormanage(BlenderRNA *brna)
                               "rna_ColorManagedColorspaceSettings_colorspace_get",
                               "rna_ColorManagedColorspaceSettings_colorspace_set",
                               "rna_ColorManagedColorspaceSettings_colorspace_itemf");
-  RNA_def_property_ui_text(prop, "Input Color Space", "Color space of the image or movie on disk");
+  RNA_def_property_ui_text(
+      prop,
+      "Input Color Space",
+      "Color space in the image file, to convert to and from when saving and loading the image");
   RNA_def_property_update(prop, NC_WINDOW, "rna_ColorManagedColorspaceSettings_reload_update");
 
   prop = RNA_def_property(srna, "is_data", PROP_BOOLEAN, PROP_NONE);

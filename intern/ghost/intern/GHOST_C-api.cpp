@@ -324,6 +324,7 @@ GHOST_TSuccess GHOST_SetCursorPosition(GHOST_SystemHandle systemhandle,
 
 GHOST_TSuccess GHOST_SetCursorGrab(GHOST_WindowHandle windowhandle,
                                    GHOST_TGrabCursorMode mode,
+                                   GHOST_TAxisFlag wrap_axis,
                                    int bounds[4],
                                    const int mouse_ungrab_xy[2])
 {
@@ -340,7 +341,7 @@ GHOST_TSuccess GHOST_SetCursorGrab(GHOST_WindowHandle windowhandle,
   }
 
   return window->setCursorGrab(
-      mode, bounds ? &bounds_rect : NULL, mouse_ungrab_xy ? mouse_xy : NULL);
+      mode, wrap_axis, bounds ? &bounds_rect : NULL, mouse_ungrab_xy ? mouse_xy : NULL);
 }
 
 GHOST_TSuccess GHOST_GetModifierKeyState(GHOST_SystemHandle systemhandle,
@@ -632,6 +633,13 @@ GHOST_TSuccess GHOST_ReleaseOpenGLContext(GHOST_ContextHandle contexthandle)
   return context->releaseDrawingContext();
 }
 
+unsigned int GHOST_GetDefaultOpenGLFramebuffer(GHOST_WindowHandle windowhandle)
+{
+  GHOST_IWindow *window = (GHOST_IWindow *)windowhandle;
+
+  return window->getDefaultFramebuffer();
+}
+
 GHOST_TSuccess GHOST_InvalidateWindow(GHOST_WindowHandle windowhandle)
 {
   GHOST_IWindow *window = (GHOST_IWindow *)windowhandle;
@@ -652,7 +660,7 @@ const GHOST_TabletData *GHOST_GetTabletData(GHOST_WindowHandle windowhandle)
 
 const GHOST_VRData *GHOST_getVRData(GHOST_WindowHandle windowhandle)
 {
-	return ((GHOST_IWindow *)windowhandle)->getVRData();
+  return ((GHOST_IWindow *)windowhandle)->getVRData();
 }
 
 GHOST_TInt32 GHOST_GetWidthRectangle(GHOST_RectangleHandle rectanglehandle)

@@ -812,7 +812,7 @@ static void bone_children_clear_transflag(int mode, short around, ListBase *lb)
       bone->flag |= BONE_TRANSFORM_CHILD;
     }
     else {
-      bone->flag &= ~BONE_TRANSFORM;
+      bone->flag &= ~(BONE_TRANSFORM | BONE_TRANSFORM_MIRROR);
     }
 
     bone_children_clear_transflag(mode, around, &bone->childbase);
@@ -838,14 +838,14 @@ int count_set_pose_transflags(Object *ob,
         bone->flag |= BONE_TRANSFORM;
       }
       else {
-        bone->flag &= ~BONE_TRANSFORM;
+        bone->flag &= ~(BONE_TRANSFORM | BONE_TRANSFORM_MIRROR);
       }
 
       bone->flag &= ~BONE_HINGE_CHILD_TRANSFORM;
       bone->flag &= ~BONE_TRANSFORM_CHILD;
     }
     else {
-      bone->flag &= ~BONE_TRANSFORM;
+      bone->flag &= ~(BONE_TRANSFORM | BONE_TRANSFORM_MIRROR);
     }
   }
 
@@ -3052,6 +3052,8 @@ static void createTransEditVerts(TransInfo *t)
     if (modifiers_getCageIndex(t->scene, tc->obedit, NULL, 1) != -1) {
       int totleft = -1;
       if (modifiers_isCorrectableDeformed(t->scene, tc->obedit)) {
+        BKE_scene_graph_evaluated_ensure(t->depsgraph, CTX_data_main(t->context));
+
         /* Use evaluated state because we need b-bone cache. */
         Scene *scene_eval = (Scene *)DEG_get_evaluated_id(t->depsgraph, &t->scene->id);
         Object *obedit_eval = (Object *)DEG_get_evaluated_id(t->depsgraph, &tc->obedit->id);
@@ -3072,7 +3074,7 @@ static void createTransEditVerts(TransInfo *t)
       if (totleft > 0)
 #endif
       {
-        mappedcos = BKE_crazyspace_get_mapped_editverts(t->depsgraph, t->scene, tc->obedit);
+        mappedcos = BKE_crazyspace_get_mapped_editverts(t->depsgraph, tc->obedit);
         quats = MEM_mallocN(em->bm->totvert * sizeof(*quats), "crazy quats");
         BKE_crazyspace_set_quats_editmesh(em, defcos, mappedcos, quats, !prop_mode);
         if (mappedcos) {
@@ -6776,7 +6778,8 @@ void autokeyframe_pose(bContext *C, Scene *scene, Object *ob, int tmode, short t
     }
 
     for (pchan = pose->chanbase.first; pchan; pchan = pchan->next) {
-      if (pchan->bone->flag & BONE_TRANSFORM) {
+      if (pchan->bone->flag & (BONE_TRANSFORM | BONE_TRANSFORM_MIRROR)) {
+
         ListBase dsources = {NULL, NULL};
 
         /* clear any 'unkeyed' flag it may have */
@@ -9651,6 +9654,9 @@ void createTransData(bContext *C, TransInfo *t)
     has_transform_context = false;
   }
   else {
+    /* Needed for correct Object.obmat after duplication, see: T62135. */
+    BKE_scene_graph_evaluated_ensure(t->depsgraph, CTX_data_main(t->context));
+
     createTransObject(C, t);
     countAndCleanTransDataContainer(t);
     t->flag |= T_OBJECT;

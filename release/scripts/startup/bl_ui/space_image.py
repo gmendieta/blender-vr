@@ -108,10 +108,10 @@ class IMAGE_MT_view(Menu):
         layout.separator()
 
         if show_uvedit:
-            layout.operator("image.view_selected")
+            layout.operator("image.view_selected", text="Frame Selected")
 
-        layout.operator("image.view_all")
-        layout.operator("image.view_all", text="View Fit").fit_view = True
+        layout.operator("image.view_all", text="Frame All")
+        layout.operator("image.view_all", text="Frame All Fit").fit_view = True
 
         layout.separator()
 
@@ -347,7 +347,6 @@ class IMAGE_MT_uvs(Menu):
 
         sima = context.space_data
         uv = sima.uv_editor
-        tool_settings = context.tool_settings
 
         layout.menu("IMAGE_MT_uvs_transform")
         layout.menu("IMAGE_MT_uvs_mirror")
@@ -535,8 +534,6 @@ class IMAGE_HT_tool_header(Header):
         layout.template_header()
 
         self.draw_tool_settings(context)
-
-        sima = context.space_data
 
         layout.separator_spacer()
 
