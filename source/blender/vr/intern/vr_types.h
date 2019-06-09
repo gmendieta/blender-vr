@@ -5,21 +5,21 @@
 
 typedef enum _VR_Space
 {
-	VR_VR_SPACE,
+	VR_VR_SPACE = 0,
 	VR_NAV_SPACE,
 	VR_NAV_SCALED_SPACE,
 } VR_Space;
 
 typedef enum _VR_Side
 {
-	VR_SIDE_LEFT,
+	VR_SIDE_LEFT = 0,
 	VR_SIDE_RIGHT,
 	VR_SIDES_MAX,
 } VR_Side;
 
 typedef enum _VR_TrackingOrigin
 {
-	VR_FLOOR_LEVEL,
+	VR_FLOOR_LEVEL = 0,
 	VR_EYE_LEVEL,
 } VR_TrackingOrigin;
 

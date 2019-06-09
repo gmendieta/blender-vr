@@ -108,6 +108,12 @@ void vr_set_view_matrix(unsigned int view, float matrix[4][4]);
 /// Set Blender built projection matrix
 void vr_set_projection_matrix(unsigned int view, float matrix[4][4]);
 
+/// Get VR Controler matrix
+void vr_controller_matrix_get(unsigned int side, float matrix[4][4]);
+
+/// Get Navigation matrix
+void vr_nav_matrix_get(float matrix[4][4], bool scaled);
+
 /// Begin a frame. Update internal tracking and device inputs
 int vr_begin_frame();
 
@@ -117,7 +123,7 @@ int vr_end_frame();
 /// Called just before Blender drawing
 void vr_region_do_pre_draw(bContext *C, unsigned int view);
 
-/// Called just after BLender drawing
+/// Called just after Blender drawing
 void vr_region_do_post_draw(bContext *C, unsigned int view);
 
 /// Process the User input using VR devices
@@ -130,7 +136,7 @@ struct VR_GHOST_Event* vr_ghost_event_pop();
 void vr_ghost_event_clear();
 
 /// Get Viewport scale
-float vr_view_scale_get();
+float vr_nav_scale_get();
 
 
 #ifdef __cplusplus

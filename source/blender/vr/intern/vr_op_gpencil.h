@@ -43,6 +43,9 @@ private:
   std::vector<bGPDspoint> m_points; // Stroke 3d points
   RNG *m_rng;
 
+  void drawStroke(bContext *C, float viewProj[4][4]);
+  void drawCursor(bContext *C, float viewProj[4][4]);
+
   Brush* getBrush(bContext *C);
   RNG* getRNG();
 };

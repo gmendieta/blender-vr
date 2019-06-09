@@ -91,6 +91,9 @@ public:
 	/// Get the current navigation scale
 	float getNavScale();
 
+  /// Get a Controller Matrix
+  void getControllerMatrix(VR_Side side, float matrix[4][4]);
+
 	/// Store Blender window
 	void setBlenderWindow(struct wmWindow *bWindow);
 

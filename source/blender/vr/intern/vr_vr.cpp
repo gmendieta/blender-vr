@@ -138,6 +138,10 @@ ARegion* vr_region_get()
 
 void vr_region_set(struct ARegion *ar)
 {
+	if (!vr.initialized) {
+		return;
+	}
+
 	vr.ar_vr = ar;
 	vrUiManager->setBlenderARegion(vr.ar_vr);
 }
@@ -309,12 +313,30 @@ void vr_camera_params_compute_viewplane(const View3D *v3d, CameraParams *params,
 
 void vr_set_view_matrix(unsigned int view, float matrix[4][4])
 {
+	BLI_assert(vr.initialized);
+
 	vrUiManager->setViewMatrix(view, matrix);
 }
 
 void vr_set_projection_matrix(unsigned int view, float matrix[4][4])
 {
+	BLI_assert(vr.initialized);
+
 	vrUiManager->setProjectionMatrix(view, matrix);
+}
+
+void vr_controller_matrix_get(unsigned int side, float matrix[4][4])
+{
+	BLI_assert(vr.initialized);
+
+	vrUiManager->getControllerMatrix(VR_Side(side), matrix);
+}
+
+void vr_nav_matrix_get(float matrix[4][4], bool scaled)
+{
+	BLI_assert(vr.initialized);
+
+	vrUiManager->getNavMatrix(matrix, scaled);
 }
 
 int vr_begin_frame()
@@ -432,7 +454,7 @@ int vr_get_eye_texture_size(int *width, int *height)
 	return VR_RESULT_SUCCESS;
 }
 
-float vr_view_scale_get()
+float vr_nav_scale_get()
 {
 	return vrUiManager->getNavScale();
 }

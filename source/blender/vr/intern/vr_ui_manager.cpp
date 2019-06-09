@@ -724,6 +724,11 @@ float VR_UI_Manager::getNavScale()
 	return len_v3(m_navScaledMatrix[0]);
 }
 
+void VR_UI_Manager::getControllerMatrix(VR_Side side, float matrix[4][4])
+{
+	copy_m4_m4(matrix, m_touchMatrices[side]);
+}
+
 void VR_UI_Manager::setBlenderWindow(struct wmWindow *bWindow)
 {
 	m_bWindow = bWindow;
@@ -776,16 +781,20 @@ void VR_UI_Manager::doPostDraw(bContext *C, unsigned int side)
 	if (!op) {
 		op = getSuitableOperator(C);
 	}
-	// Draw standard only if an operator does not override
-	if (!op || !op->overridesCursor() || !op->poll(C)) {
-		drawTouchControllers();
-	}
+
 	// Draw UI only if visible
 	if (m_uiVisibility == VR_UI_Visibility_kVisible) {
 		drawUserInterface();
 	}
-	if (m_currentOp) {
-		m_currentOp->draw(C, m_viewProjectionMatrix);
+
+	// Operator could overrides only while kIdle or kOperator
+	bool drawOverridesCursor = op && op->overridesCursor() && (m_state == VR_UI_State_kIdle || m_state == VR_UI_State_kOperator);		
+	if (!drawOverridesCursor) {
+		drawTouchControllers();
+	}
+	
+	if (drawOverridesCursor || m_currentOp) {
+		op->draw(C, m_viewProjectionMatrix);
 	}
 }
 
@@ -806,7 +815,6 @@ void VR_UI_Manager::drawTouchControllers()
 	GPUBatch *batch = DRW_cache_sphere_get();
 	GPUShader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
 	GPU_batch_program_set_shader(batch, shader);
-
 
 	GPU_depth_test(true);
 	for (int touchSide = 0; touchSide < VR_SIDES_MAX; ++touchSide) {

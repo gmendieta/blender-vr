@@ -35,10 +35,13 @@ extern "C"
 
 #include "ED_undo.h"
 #include "ED_gpencil.h"
+#include "ED_view3d.h"
 
 #include "GPU_immediate.h"
 #include "GPU_state.h"
 #include "GPU_draw.h"
+
+#include "draw_cache.h"
 
 #include "gpencil_intern.h"
 
@@ -130,40 +133,50 @@ bool VR_OP_GPencil::poll(bContext *C)
 
 bool VR_OP_GPencil::overridesCursor()
 {
-	// TODO
-	return false;
+	return true;
 }
 
 VR_OPERATOR_STATE VR_OP_GPencil::invoke(bContext *C, VR_Event *event)
 {
 	// Check thumbsticks to allow user to modify Sensitivity and Strength while drawing
-	bool brush_edited(false);
 	Brush *brush = getBrush(C);
-	if (event->r_thumbstick_up_pressure > 0.1f) {
-		int size = brush->size + 1;
-		// scale unprojected radius so it stays consistent with brush size
-		BKE_brush_scale_unprojected_radius(&brush->unprojected_radius, size, brush->size);
-		brush->size = size;
-		brush_edited = true;
-	}
-	else if (event->r_thumbstick_down_pressure > 0.1f) {
-		int size = brush->size - 1;
-		// scale unprojected radius so it stays consistent with brush size 
-		BKE_brush_scale_unprojected_radius(&brush->unprojected_radius, size, brush->size);
-		brush->size = size;
-		brush_edited = true;
-	}
+	
+	bool brush_edited(false);
+	float pressure_updown = event->r_thumbstick_up_pressure > event->r_thumbstick_down_pressure ? event->r_thumbstick_up_pressure : event->r_thumbstick_down_pressure;
+	float pressure_leftright = event->r_thumbstick_left_pressure > event->r_thumbstick_right_pressure ? event->r_thumbstick_left_pressure : event->r_thumbstick_right_pressure;
 
-	if (event->r_thumbstick_left_pressure > 0.1f) {
-		float strength = brush->gpencil_settings->draw_strength - event->r_thumbstick_left_pressure / 10.0f;
-		brush->gpencil_settings->draw_strength = CLAMPIS(strength, 0.0f, 1.0f);
-		brush_edited = true;
+	// Compare UpDown with LeftRight. Only allow one of this modifications
+	if (pressure_updown > pressure_leftright) {	// Modify brush size
+		if (event->r_thumbstick_up_pressure > 0.1f) {
+			int size_new = brush->size + int(event->r_thumbstick_up_pressure * 10);
+			size_new = CLAMPIS(size_new, 0, 500);
+			// scale unprojected radius so it stays consistent with brush size
+			BKE_brush_scale_unprojected_radius(&brush->unprojected_radius, size_new, brush->size);
+			brush->size = size_new;
+			brush_edited = true;
+		}
+		else if (event->r_thumbstick_down_pressure > 0.1f) {
+			int size_new = brush->size - int(event->r_thumbstick_down_pressure * 10);
+			size_new = CLAMPIS(size_new, 0, 500);
+			// scale unprojected radius so it stays consistent with brush size 
+			BKE_brush_scale_unprojected_radius(&brush->unprojected_radius, size_new, brush->size);
+			brush->size = size_new;
+			brush_edited = true;
+		}
 	}
-	else if (event->r_thumbstick_right_pressure > 0.1f) {
-		float strength = brush->gpencil_settings->draw_strength + event->r_thumbstick_right_pressure / 10.0f;
-		brush->gpencil_settings->draw_strength = CLAMPIS(strength, 0.0f, 1.0f);
-		brush_edited = true;
+	else {	// Modify brush strength
+		if (event->r_thumbstick_left_pressure > 0.1f) {
+			float strength = brush->gpencil_settings->draw_strength - event->r_thumbstick_left_pressure / 10.0f;
+			brush->gpencil_settings->draw_strength = CLAMPIS(strength, 0.0f, 1.0f);
+			brush_edited = true;
+		}
+		else if (event->r_thumbstick_right_pressure > 0.1f) {
+			float strength = brush->gpencil_settings->draw_strength + event->r_thumbstick_right_pressure / 10.0f;
+			brush->gpencil_settings->draw_strength = CLAMPIS(strength, 0.0f, 1.0f);
+			brush_edited = true;
+		}
 	}
+	
 	if (brush_edited) {
 		WM_event_add_notifier(C, NC_BRUSH | NA_EDITED, brush);
 		WM_event_add_notifier(C, NC_SPACE | ND_SPACE_VIEW3D, NULL);
@@ -371,16 +384,16 @@ int VR_OP_GPencil::addStroke(bContext *C)
 	return 1;
 }
 
-void VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
+void VR_OP_GPencil::drawStroke(bContext *C, float viewProj[4][4])
 {
 	int totpoints = m_points.size();
 	if (totpoints < 2) {
 		return;
 	}
-	
+
 	float sthickness;
 	float ink[4];
-	
+
 	Brush *brush = getBrush(C);
 	Object *ob = CTX_data_active_object(C);
 
@@ -398,15 +411,95 @@ void VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
 		gp_style = BKE_material_gpencil_settings_get(ob, ob->actcol);
 	}
 
-	float vr_scale = vr_view_scale_get();
+	float vr_nav_scale = vr_nav_scale_get();
 
-	sthickness = brush->size * obscale / vr_scale;
+	sthickness = brush->size * obscale / vr_nav_scale;
 	copy_v4_v4(ink, gp_style->stroke_rgba);
 
 	GPU_depth_test(true);
 	// Draw volumetric points
 	gp_draw_stroke_volumetric_3d(m_points.data(), totpoints, sthickness, ink);
 	GPU_depth_test(false);
+}
+
+
+void VR_OP_GPencil::drawCursor(bContext *C, float viewProj[4][4])
+{
+	float cursorMatrix[4][4];
+	float modelViewProj[4][4];
+	float navScaledMatrix[4][4];
+	float modelScale[4][4];
+
+	Brush *brush = getBrush(C);
+	Object *ob = CTX_data_active_object(C);
+
+	GPUBatch *batch = DRW_cache_sphere_get();
+	GPUShader *shader = GPU_shader_get_builtin_shader(GPU_SHADER_3D_UNIFORM_COLOR);
+	GPU_batch_program_set_shader(batch, shader);
+
+	float ink[4];
+
+
+	// Copied from gpencil_draw_utils.c function DRW_gpencil_populate_buffer_strokes
+	MaterialGPencilStyle *gp_style = NULL;
+	float obscale = mat4_to_scale(ob->obmat);
+
+	/* use the brush material */
+	Material *ma = BKE_gpencil_object_material_get_from_brush(ob, brush);
+	if (ma != NULL) {
+		gp_style = ma->gp_style;
+	}
+	/* this is not common, but avoid any special situations when brush could be without material */
+	if (gp_style == NULL) {
+		gp_style = BKE_material_gpencil_settings_get(ob, ob->actcol);
+	}
+
+	copy_v4_v4(ink, gp_style->stroke_rgba);
+	// Modify Gizmo alpha using Draw strength
+	ink[3] *= brush->gpencil_settings->draw_strength;
+
+
+	// Calculate scale factor for our Brush sphere
+	ARegion *ar = vr_region_get();
+	RegionView3D *rv3d = (RegionView3D*)ar->regiondata;
+
+	// Calculate scale of the Cursor sphere
+	float vr_nav_scale = vr_nav_scale_get();
+	float view_co[4] = { 0.0f, 0.0f, -0.3f, 1.0f };
+	mul_m4_v4(rv3d->viewinv, view_co);
+	float pixelsize = ED_view3d_pixel_size(rv3d, view_co);
+	float scale = (float)brush->size * pixelsize * obscale / vr_nav_scale;
+	scale_m4_fl(modelScale, scale);
+
+	vr_nav_matrix_get(navScaledMatrix, true);
+	GPU_depth_test(true);
+	GPU_blend(true);
+	for (int touchSide = 0; touchSide < VR_SIDES_MAX; ++touchSide) {
+		// Build ModelViewProjection matrix
+		vr_controller_matrix_get(touchSide, cursorMatrix);
+		copy_m4_m4(modelViewProj, cursorMatrix);
+		mul_m4_m4_pre(modelViewProj, modelScale);
+		// Copy Translation because of scaling
+		copy_v3_v3(modelViewProj[3], cursorMatrix[3]);
+		// Apply navigation to model to make it appear in Eye space
+		mul_m4_m4_pre(modelViewProj, navScaledMatrix);
+		mul_m4_m4_pre(modelViewProj, viewProj);
+
+		GPU_batch_uniform_4f(batch, "color", ink[0], ink[1], ink[2], ink[3]);
+		GPU_batch_uniform_mat4(batch, "ModelViewProjectionMatrix", modelViewProj);
+		GPU_batch_program_use_begin(batch);
+		GPU_batch_bind(batch);
+		GPU_batch_draw_advanced(batch, 0, 0, 0, 0);
+		GPU_batch_program_use_end(batch);
+	}
+	GPU_blend(false);
+	GPU_depth_test(false);
+}
+
+void VR_OP_GPencil::draw(bContext *C, float viewProj[4][4])
+{
+	drawCursor(C, viewProj);
+	drawStroke(C, viewProj);
 }
 
 Brush* VR_OP_GPencil::getBrush(bContext * C)
