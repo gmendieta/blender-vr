@@ -10,7 +10,7 @@ using namespace OVR;
 VR_Oculus::VR_Oculus():
 	initialized(false),
 	mFrame(0),
-	mHmd(0)							// nullptr?
+	mHmd(nullptr)
 {
 	mErrorInfo.Result = ovrSuccess;
 	memset(&mInfo, 0, sizeof(mInfo));
@@ -29,12 +29,17 @@ int VR_Oculus::initialize(void * device, void * context)
 	ovrResult result = ovr_Initialize(nullptr);
 	if (OVR_FAILURE(result)) {
 		ovr_GetLastErrorInfo(&mErrorInfo);
+		printf("Error initializing VR. Call to ovr_Initialize function\n");
+		printf("%s", mErrorInfo.ErrorString);
 		return -1;
 	}
 	
 	result = ovr_Create(&mHmd, &mGraphicsLuid);
 	if (OVR_FAILURE(result)) {
 		ovr_GetLastErrorInfo(&mErrorInfo);
+		printf("Error initializing VR. Call to ovr_Create function\n");
+		printf("%s", mErrorInfo.ErrorString);
+		ovr_Shutdown();						// Shutdown only here because ovr_Initialize succeed
 		return -1;
 	}
 	
@@ -83,12 +88,17 @@ int VR_Oculus::initialize(void * device, void * context)
 		desc.SampleCount = 1;
 		desc.StaticImage = false;
 
+		printf("Recommended texture size: %d x %d\n", recommendedTextureSize.w, recommendedTextureSize.h);
+
 		ovrResult result = ovr_CreateTextureSwapChainGL(mHmd, &desc, &mInfo.mEye[i].mTextureChain);
-		if (!OVR_SUCCESS(result))
+		if (OVR_FAILURE(result))
 		{
+			ovr_GetLastErrorInfo(&mErrorInfo);
+			printf("Error initializing VR. Call to ovr_CreateTextureSwapChainGL function\n");
+			printf("%s", mErrorInfo.ErrorString);
+			ovr_Shutdown();						// Shutdown only here because ovr_Initialize succeed
 			return -1;
 		}
-		// Just if needed
 		int length;
 		ovr_GetTextureSwapChainLength(mHmd, mInfo.mEye[i].mTextureChain, &length);
 
@@ -105,18 +115,19 @@ int VR_Oculus::initialize(void * device, void * context)
 
 void VR_Oculus::unintialize()
 {
-	if (initialized)
+	if (mHmd)
 	{
-		if (mHmd)
-		{
+		if (mInfo.mEye[0].mTextureChain) {
 			ovr_DestroyTextureSwapChain(mHmd, mInfo.mEye[0].mTextureChain);
-			ovr_DestroyTextureSwapChain(mHmd, mInfo.mEye[1].mTextureChain);
-			ovr_Destroy(mHmd);
-			mHmd = 0;				// nullptr?
 		}
-		ovr_Shutdown();
-		initialized = false;
+		if (mInfo.mEye[1].mTextureChain) {
+			ovr_DestroyTextureSwapChain(mHmd, mInfo.mEye[1].mTextureChain);
+		}
+		ovr_Destroy(mHmd);
+		mHmd = nullptr;
 	}
+	ovr_Shutdown();
+	initialized = false;
 }
 
 void VR_Oculus::beginFrame()

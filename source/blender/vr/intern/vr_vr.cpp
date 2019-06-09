@@ -49,15 +49,20 @@ int vr_initialize()
 	//vr.context = (HGLRC)context;
 	//wglMakeCurrent(vr.device, vr.context);
 
-	if (!vrHmd) {
-		vrHmd = new VR_Oculus();
+	if (vrHmd) {
+		delete vrHmd;
 	}
-	if (!vrUiManager) {
-		vrUiManager = new VR_UI_Manager();
+	if (vrUiManager) {
+		delete vrUiManager;
 	}
+
+	vrHmd = new VR_Oculus();
+	vrUiManager = new VR_UI_Manager();
 
 	int result = vrHmd->initialize(nullptr, nullptr);
 	if (result < 0) {
+		delete vrHmd; vrHmd = nullptr;
+		delete vrUiManager; vrUiManager = nullptr;
 		vr.initialized = 0;
 		return VR_RESULT_ERROR;
 	}

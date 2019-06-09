@@ -467,7 +467,7 @@ void VR_OP_GPencil::drawCursor(bContext *C, float viewProj[4][4])
 	float vr_nav_scale = vr_nav_scale_get();
 	float view_co[4] = { 0.0f, 0.0f, -0.3f, 1.0f };
 	mul_m4_v4(rv3d->viewinv, view_co);
-	float pixelsize = ED_view3d_pixel_size(rv3d, view_co);
+	float pixelsize = ED_view3d_pixel_size_no_ui_scale(rv3d, view_co);
 	float scale = (float)brush->size * pixelsize * obscale / vr_nav_scale;
 	scale_m4_fl(modelScale, scale);
 
